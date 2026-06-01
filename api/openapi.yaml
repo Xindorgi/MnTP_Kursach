@@ -1,0 +1,403 @@
+openapi: "3.1.0"
+info:
+  title: URL Shortener API
+  description: |
+    Высокопроизводительный сервис сокращения ссылок с аналитикой.
+
+    ## Возможности
+
+    - Создание коротких ссылок
+    - Редирект на оригинальный URL
+    - Аналитика переходов (клики, география, рефереры)
+    - Веб-дашборд для тестирования
+
+    ## Аутентификация
+
+    Для доступа к аналитике требуется `management_token`, который выдаётся при создании короткой ссылки.
+    Токен передаётся как query-параметр `token`.
+
+    ## Формат коротких кодов
+
+    Коды генерируются алгоритмом Sqids (на основе Hashids) из числового ID записи в БД.
+    Минимальная длина кода — 6 символов.
+  version: "1.0.0"
+  contact:
+    name: URL Shortener Team
+    url: https://github.com/v8950/url-shortener
+  license:
+    name: MIT
+    identifier: MIT
+
+servers:
+  - url: http://localhost:8080
+    description: Локальный сервер разработки
+
+# Безопасность не требуется на уровне схемы — аутентификация через query-параметр token
+security: []
+
+paths:
+  /api/v1/shorten:
+    post:
+      summary: Создать короткую ссылку
+      description: |
+        Принимает оригинальный URL и возвращает короткую ссылку,
+        уникальный короткий код и management token для доступа к аналитике.
+
+        URL должен быть валидным HTTP или HTTPS адресом.
+      operationId: createShortURL
+      tags:
+        - URLs
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ShortenRequest"
+            example:
+              url: "https://example.com/very/long/url/that/needs/shortening"
+          application/xml:
+            schema:
+              $ref: "#/components/schemas/ShortenRequest"
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: "#/components/schemas/ShortenRequest"
+      responses:
+        "201":
+          description: Короткая ссылка успешно создана
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShortenResponse"
+              example:
+                short_url: "http://localhost:8080/abc123"
+                short_code: "abc123"
+                management_token: "550e8400-e29b-41d4-a716-446655440000"
+        "400":
+          description: Неверный запрос
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                empty-url:
+                  summary: URL не указан
+                  value:
+                    error: "url is required"
+                invalid-format:
+                  summary: Неверный формат URL
+                  value:
+                    error: "invalid URL format. Must be a valid http or https URL"
+                bad-body:
+                  summary: Неверное тело запроса
+                  value:
+                    error: "invalid request body"
+        "500":
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error: "failed to create short URL"
+
+  /{code}:
+    get:
+      summary: Редирект на оригинальный URL
+      description: |
+        Выполняет перенаправление (301 Moved Permanently) на оригинальный URL,
+        соответствующий указанному короткому коду.
+
+        При редиректе асинхронно записывается событие клика для аналитики
+        (IP, User-Agent, Referer, GeoIP данные).
+      operationId: resolveShortURL
+      tags:
+        - URLs
+      parameters:
+        - name: code
+          in: path
+          required: true
+          description: Короткий код ссылки
+          schema:
+            type: string
+            minLength: 6
+            example: "abc123"
+      responses:
+        "302":
+          description: Редирект на оригинальный URL (временное перенаправление)
+          headers:
+            Location:
+              schema:
+                type: string
+                format: uri
+              description: Оригинальный URL для перенаправления
+        "301":
+          description: Редирект на оригинальный URL (постоянное перенаправление)
+          headers:
+            Location:
+              schema:
+                type: string
+                format: uri
+              description: Оригинальный URL для перенаправления
+        "404":
+          description: Короткий код не найден
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error: "URL not found"
+
+  /api/v1/analytics/{code}:
+    get:
+      summary: Получить аналитику по короткой ссылке
+      description: |
+        Возвращает агрегированную статистику переходов по короткой ссылке:
+        общее количество кликов, разбивка по дням, топ стран и топ рефереров.
+
+        Для доступа требуется валидный management_token, полученный при создании ссылки.
+      operationId: getAnalytics
+      tags:
+        - Analytics
+      parameters:
+        - name: code
+          in: path
+          required: true
+          description: Короткий код ссылки
+          schema:
+            type: string
+            minLength: 6
+            example: "abc123"
+        - name: token
+          in: query
+          required: true
+          description: Management token для авторизации
+          schema:
+            type: string
+            format: uuid
+            example: "550e8400-e29b-41d4-a716-446655440000"
+      responses:
+        "200":
+          description: Статистика аналитики
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalyticsResponse"
+              example:
+                total_clicks: 42
+                daily_clicks:
+                  - date: "2026-05-30"
+                    count: 15
+                  - date: "2026-05-31"
+                    count: 27
+                top_countries:
+                  - country: "US"
+                    count: 20
+                  - country: "RU"
+                    count: 15
+                  - country: "DE"
+                    count: 7
+                top_referrers:
+                  - referrer: "https://twitter.com"
+                    count: 10
+                  - referrer: "https://reddit.com"
+                    count: 8
+                  - referrer: "Direct"
+                    count: 24
+        "400":
+          description: Не указан короткий код
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error: "short code is required"
+        "401":
+          description: Не указан management token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error: "management token is required"
+        "403":
+          description: Неверный management token или ссылка не найдена
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                invalid-token:
+                  summary: Неверный токен
+                  value:
+                    error: "invalid management token"
+                not-found:
+                  summary: Ссылка не найдена
+                  value:
+                    error: "URL not found"
+
+  /dashboard:
+    get:
+      summary: Веб-дашборд
+      description: |
+        Возвращает HTML-страницу с веб-интерфейсом для тестирования API.
+        Дашборд позволяет создавать короткие ссылки, просматривать аналитику
+        и тестировать редиректы прямо из браузера.
+      operationId: getDashboard
+      tags:
+        - UI
+      responses:
+        "200":
+          description: HTML-страница дашборда
+          content:
+            text/html:
+              schema:
+                type: string
+                description: HTML-разметка дашборда
+        "500":
+          description: Внутренняя ошибка сервера при рендеринге шаблона
+          content:
+            text/html:
+              schema:
+                type: string
+                description: Страница с сообщением об ошибке
+
+components:
+  schemas:
+    ShortenRequest:
+      type: object
+      description: Запрос на создание короткой ссылки
+      required:
+        - url
+      properties:
+        url:
+          type: string
+          format: uri
+          description: Оригинальный URL для сокращения
+          example: "https://example.com/very/long/url"
+      xml:
+        name: request
+
+    ShortenResponse:
+      type: object
+      description: Ответ с созданной короткой ссылкой
+      required:
+        - short_url
+        - short_code
+        - management_token
+      properties:
+        short_url:
+          type: string
+          format: uri
+          description: Полная короткая ссылка для редиректа
+          example: "http://localhost:8080/abc123"
+        short_code:
+          type: string
+          description: Уникальный короткий код
+          minLength: 6
+          example: "abc123"
+        management_token:
+          type: string
+          format: uuid
+          description: Токен для управления ссылкой и доступа к аналитике
+          example: "550e8400-e29b-41d4-a716-446655440000"
+
+    AnalyticsResponse:
+      type: object
+      description: Агрегированная статистика переходов
+      required:
+        - total_clicks
+        - daily_clicks
+        - top_countries
+        - top_referrers
+      properties:
+        total_clicks:
+          type: integer
+          description: Общее количество переходов
+          minimum: 0
+          example: 42
+        daily_clicks:
+          type: array
+          description: Разбивка кликов по дням
+          items:
+            $ref: "#/components/schemas/DailyClickCount"
+        top_countries:
+          type: array
+          description: Топ стран по количеству переходов
+          items:
+            $ref: "#/components/schemas/CountryCount"
+        top_referrers:
+          type: array
+          description: Топ источников переходов
+          items:
+            $ref: "#/components/schemas/ReferrerCount"
+
+    DailyClickCount:
+      type: object
+      description: Количество кликов за конкретный день
+      required:
+        - date
+        - count
+      properties:
+        date:
+          type: string
+          format: date
+          description: Дата в формате YYYY-MM-DD
+          example: "2026-05-31"
+        count:
+          type: integer
+          description: Количество кликов
+          minimum: 0
+          example: 27
+
+    CountryCount:
+      type: object
+      description: Количество кликов из конкретной страны
+      required:
+        - country
+        - count
+      properties:
+        country:
+          type: string
+          description: Код страны (ISO 3166-1 alpha-2)
+          example: "US"
+        count:
+          type: integer
+          description: Количество кликов
+          minimum: 0
+          example: 20
+
+    ReferrerCount:
+      type: object
+      description: Количество кликов с конкретного реферера
+      required:
+        - referrer
+        - count
+      properties:
+        referrer:
+          type: string
+          description: URL источника перехода или "Direct" для прямых переходов
+          example: "https://twitter.com"
+        count:
+          type: integer
+          description: Количество кликов
+          minimum: 0
+          example: 10
+
+    ErrorResponse:
+      type: object
+      description: Ответ с ошибкой
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Описание ошибки
+          example: "URL not found"
+
+tags:
+  - name: URLs
+    description: Операции с короткими ссылками (создание, редирект)
+  - name: Analytics
+    description: Получение статистики переходов
+  - name: UI
+    description: Веб-интерфейс
