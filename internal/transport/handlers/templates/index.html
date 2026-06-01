@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>URL Shortener — Shorten Your Links</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Gradient background animation */
+        @keyframes gradient-shift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        .bg-animated {
+            background: linear-gradient(-45deg, #0f172a, #1e1b4b, #0f172a, #1e293b);
+            background-size: 400% 400%;
+            animation: gradient-shift 15s ease infinite;
+        }
+        /* Glassmorphism card */
+        .glass {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .glass-strong {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+        }
+        /* Smooth fade-in */
+        @keyframes fade-in-up {
+            0% { opacity: 0; transform: translateY(16px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in-up {
+            animation: fade-in-up 0.5s ease-out forwards;
+        }
+        /* Spinner */
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2.5px solid rgba(255,255,255,0.3);
+            border-top-color: #ffffff;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+        }
+        /* Pulse glow for the result card */
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.15); }
+            50% { box-shadow: 0 0 40px rgba(59, 130, 246, 0.3); }
+        }
+        .result-glow {
+            animation: pulse-glow 2s ease-in-out infinite;
+        }
+        /* Input focus ring */
+        .input-focus:focus {
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.4), 0 0 20px rgba(59, 130, 246, 0.1);
+        }
+        /* Copy button feedback */
+        .copied-flash {
+            transition: background-color 0.2s ease;
+        }
+        /* Smooth height transition for result block */
+        .result-wrapper {
+            display: grid;
+            grid-template-rows: 0fr;
+            transition: grid-template-rows 0.5s ease-out;
+        }
+        .result-wrapper.open {
+            grid-template-rows: 1fr;
+        }
+        .result-wrapper > div {
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body class="bg-animated min-h-screen text-white font-sans antialiased">
+
+    <div class="relative z-10 flex flex-col min-h-screen">
+        <!-- Header -->
+        <header class="w-full px-6 py-5">
+            <div class="max-w-4xl mx-auto flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                    <span class="text-2xl">🔗</span>
+                    <span class="text-xl font-bold tracking-tight bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+                        URL Shortener
+                    </span>
+                </div>
+                <a href="/dashboard"
+                   class="text-sm text-gray-400 hover:text-white transition px-4 py-2 rounded-lg hover:bg-white/5">
+                    📊 Dashboard
+                </a>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="flex-1 flex items-center justify-center px-6 py-8">
+            <div class="w-full max-w-2xl mx-auto">
+
+                <!-- Hero -->
+                <div class="text-center mb-10 animate-fade-in-up">
+                    <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight leading-tight">
+                        Make your links
+                        <span class="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">shorter</span>
+                    </h1>
+                    <p class="mt-4 text-lg text-gray-400 max-w-lg mx-auto">
+                        Paste a long URL and get a short, shareable link with built-in analytics.
+                    </p>
+                </div>
+
+                <!-- Shorten Card -->
+                <div class="glass rounded-2xl p-6 sm:p-8 animate-fade-in-up" style="animation-delay: 0.1s;">
+
+                    <!-- Input Form -->
+                    <form id="shortenForm" class="flex flex-col sm:flex-row gap-3">
+                        <div class="flex-1 relative">
+                            <input
+                                type="url"
+                                id="urlInput"
+                                name="url"
+                                placeholder="https://example.com/very/long/url/that/needs/shortening"
+                                required
+                                autofocus
+                                class="input-focus w-full px-5 py-3.5 bg-white/10 border border-white/20 rounded-xl
+                                       text-white placeholder-gray-500 outline-none transition-all
+                                       focus:border-blue-500/50 focus:bg-white/15 text-base"
+                            >
+                            <!-- Inline error -->
+                            <p id="errorText" class="hidden mt-2 text-sm text-red-400 flex items-center gap-1.5">
+                                <span>⚠️</span>
+                                <span id="errorMessage"></span>
+                            </p>
+                        </div>
+                        <button
+                            type="submit"
+                            id="shortenBtn"
+                            class="shrink-0 px-7 py-3.5 bg-gradient-to-r from-blue-600 to-purple-600
+                                   hover:from-blue-500 hover:to-purple-500 text-white font-semibold rounded-xl
+                                   transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed
+                                   focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-2 focus:ring-offset-transparent
+                                   flex items-center justify-center gap-2 min-w-[140px]"
+                        >
+                            <span id="btnText">Shorten</span>
+                            <span id="btnSpinner" class="hidden"><span class="spinner"></span></span>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Result Block (hidden initially) -->
+                <div id="resultWrapper" class="result-wrapper mt-6">
+                    <div>
+                        <div id="resultCard" class="glass-strong rounded-2xl p-6 sm:p-8 result-glow animate-fade-in-up hidden">
+                            <!-- Short URL -->
+                            <div class="mb-6">
+                                <label class="block text-sm font-medium text-gray-400 mb-2">Your short link</label>
+                                <div class="flex gap-2">
+                                    <input
+                                        type="text"
+                                        id="shortUrlOutput"
+                                        readonly
+                                        class="flex-1 px-4 py-3 bg-white/10 border border-white/20 rounded-xl
+                                               text-white text-base outline-none select-all cursor-text"
+                                    >
+                                    <button
+                                        id="copyBtn"
+                                        class="copied-flash px-5 py-3 bg-blue-600/80 hover:bg-blue-500 rounded-xl
+                                               transition font-medium text-sm flex items-center gap-2 whitespace-nowrap"
+                                    >
+                                        <span id="copyIcon">📋</span>
+                                        <span id="copyText">Copy</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Management Token -->
+                            <div class="mb-6">
+                                <label class="block text-sm font-medium text-gray-400 mb-2">Management Token</label>
+                                <div class="flex gap-2">
+                                    <input
+                                        type="text"
+                                        id="tokenOutput"
+                                        readonly
+                                        class="flex-1 px-4 py-3 bg-white/10 border border-white/20 rounded-xl
+                                               text-white text-base outline-none select-all cursor-text font-mono text-sm"
+                                    >
+                                    <button
+                                        id="copyTokenBtn"
+                                        class="copied-flash px-5 py-3 bg-gray-600/80 hover:bg-gray-500 rounded-xl
+                                               transition font-medium text-sm flex items-center gap-2 whitespace-nowrap"
+                                    >
+                                        <span id="copyTokenIcon">📋</span>
+                                        <span id="copyTokenText">Copy</span>
+                                    </button>
+                                </div>
+                                <p class="mt-2 text-xs text-amber-400/80 flex items-start gap-1.5">
+                                    <span class="shrink-0 mt-0.5">⚠️</span>
+                                    <span>Save this token — you'll need it to access the analytics dashboard for this link.</span>
+                                </p>
+                            </div>
+
+                            <!-- Go to Analytics -->
+                            <a
+                                id="analyticsLink"
+                                href="#"
+                                class="inline-flex items-center gap-2 px-6 py-3 bg-white/10 hover:bg-white/20
+                                       rounded-xl transition font-medium text-sm"
+                            >
+                                📊 Go to Analytics
+                                <span class="text-lg">→</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer hint -->
+                <p class="text-center text-gray-600 text-xs mt-8">
+                    Free & open source · No registration required
+                </p>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        (function() {
+            const form = document.getElementById('shortenForm');
+            const urlInput = document.getElementById('urlInput');
+            const shortenBtn = document.getElementById('shortenBtn');
+            const btnText = document.getElementById('btnText');
+            const btnSpinner = document.getElementById('btnSpinner');
+            const errorText = document.getElementById('errorText');
+            const errorMessage = document.getElementById('errorMessage');
+            const resultWrapper = document.getElementById('resultWrapper');
+            const resultCard = document.getElementById('resultCard');
+            const shortUrlOutput = document.getElementById('shortUrlOutput');
+            const tokenOutput = document.getElementById('tokenOutput');
+            const analyticsLink = document.getElementById('analyticsLink');
+            const copyBtn = document.getElementById('copyBtn');
+            const copyText = document.getElementById('copyText');
+            const copyIcon = document.getElementById('copyIcon');
+            const copyTokenBtn = document.getElementById('copyTokenBtn');
+            const copyTokenText = document.getElementById('copyTokenText');
+            const copyTokenIcon = document.getElementById('copyTokenIcon');
+
+            // --- Utility: copy to clipboard ---
+            async function copyToClipboard(text, btnEl, textEl, iconEl, originalText) {
+                try {
+                    await navigator.clipboard.writeText(text);
+                    textEl.textContent = 'Copied!';
+                    iconEl.textContent = '✅';
+                    btnEl.classList.add('bg-green-600/80', 'hover:bg-green-500');
+                    btnEl.classList.remove('bg-blue-600/80', 'hover:bg-blue-500', 'bg-gray-600/80', 'hover:bg-gray-500');
+                    setTimeout(() => {
+                        textEl.textContent = originalText;
+                        iconEl.textContent = '📋';
+                        btnEl.classList.remove('bg-green-600/80', 'hover:bg-green-500');
+                        if (btnEl === copyBtn) {
+                            btnEl.classList.add('bg-blue-600/80', 'hover:bg-blue-500');
+                        } else {
+                            btnEl.classList.add('bg-gray-600/80', 'hover:bg-gray-500');
+                        }
+                    }, 2000);
+                } catch {
+                    // Fallback
+                    const ta = document.createElement('textarea');
+                    ta.value = text;
+                    document.body.appendChild(ta);
+                    ta.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(ta);
+                    textEl.textContent = 'Copied!';
+                    iconEl.textContent = '✅';
+                    setTimeout(() => {
+                        textEl.textContent = originalText;
+                        iconEl.textContent = '📋';
+                    }, 2000);
+                }
+            }
+
+            // Copy short URL
+            copyBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                copyToClipboard(shortUrlOutput.value, copyBtn, copyText, copyIcon, 'Copy');
+            });
+
+            // Copy token
+            copyTokenBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                copyToClipboard(tokenOutput.value, copyTokenBtn, copyTokenText, copyTokenIcon, 'Copy');
+            });
+
+            // --- Form submission (use click on button instead of form submit) ---
+            async function handleShorten() {
+                const url = urlInput.value.trim();
+
+                // Basic client-side validation
+                if (!url) {
+                    showError('Please enter a URL.');
+                    return;
+                }
+
+                // Hide previous result and error
+                hideError();
+                hideResult();
+
+                // Show loading state
+                setLoading(true);
+
+                try {
+                    const response = await fetch('/api/v1/shorten', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ url: url })
+                    });
+
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        throw new Error(data.error || 'Server error (' + response.status + ')');
+                    }
+
+                    // Success — populate result
+                    shortUrlOutput.value = data.short_url;
+                    tokenOutput.value = data.management_token;
+                    analyticsLink.href = '/dashboard?code=' + encodeURIComponent(data.short_code) + '&token=' + encodeURIComponent(data.management_token);
+
+                    showResult();
+                } catch (err) {
+                    showError(err.message);
+                } finally {
+                    setLoading(false);
+                }
+            }
+
+            // Prevent form submission (which causes page reload)
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                handleShorten();
+            });
+
+            // Also handle click on the button directly
+            shortenBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                handleShorten();
+            });
+
+            // Handle Enter key in the input field
+            urlInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleShorten();
+                }
+            });
+
+            // --- UI helpers ---
+            function setLoading(loading) {
+                if (loading) {
+                    btnText.classList.add('hidden');
+                    btnSpinner.classList.remove('hidden');
+                    shortenBtn.disabled = true;
+                } else {
+                    btnText.classList.remove('hidden');
+                    btnSpinner.classList.add('hidden');
+                    shortenBtn.disabled = false;
+                }
+            }
+
+            function showError(msg) {
+                errorMessage.textContent = msg;
+                errorText.classList.remove('hidden');
+                urlInput.classList.add('border-red-500/50', 'focus:border-red-500');
+            }
+
+            function hideError() {
+                errorText.classList.add('hidden');
+                urlInput.classList.remove('border-red-500/50', 'focus:border-red-500');
+            }
+
+            function showResult() {
+                resultCard.classList.remove('hidden');
+                // Trigger CSS grid animation
+                requestAnimationFrame(function() {
+                    resultWrapper.classList.add('open');
+                });
+            }
+
+            function hideResult() {
+                resultWrapper.classList.remove('open');
+                resultCard.classList.add('hidden');
+            }
+
+            // Clear error on input
+            urlInput.addEventListener('input', function() {
+                if (!errorText.classList.contains('hidden')) {
+                    hideError();
+                }
+            });
+
+            // Auto-focus input on load
+            urlInput.focus();
+        })();
+    </script>
+</body>
+</html>

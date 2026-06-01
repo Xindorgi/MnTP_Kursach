@@ -83,12 +83,12 @@ func (r *ClickRepository) GetStats(ctx context.Context, urlID int64) (*domain.Cl
 		stats.DailyClicks = append(stats.DailyClicks, d)
 	}
 
-	// Top countries
+	// Top countries (normalize empty strings; GROUP BY must match SELECT expression)
 	rows, err = r.pool.Query(ctx,
-		`SELECT COALESCE(country, 'Unknown') as country, COUNT(*) as count
+		`SELECT COALESCE(NULLIF(TRIM(country), ''), 'Unknown') AS country, COUNT(*) AS count
 		 FROM url_clicks
 		 WHERE url_id = $1
-		 GROUP BY country
+		 GROUP BY COALESCE(NULLIF(TRIM(country), ''), 'Unknown')
 		 ORDER BY count DESC
 		 LIMIT 10`,
 		urlID,
@@ -106,12 +106,12 @@ func (r *ClickRepository) GetStats(ctx context.Context, urlID int64) (*domain.Cl
 		stats.TopCountries = append(stats.TopCountries, c)
 	}
 
-	// Top referrers
+	// Top referrers (normalize empty strings; GROUP BY must match SELECT expression)
 	rows, err = r.pool.Query(ctx,
-		`SELECT COALESCE(referer, 'Direct') as referer, COUNT(*) as count
+		`SELECT COALESCE(NULLIF(TRIM(referer), ''), 'Direct') AS referer, COUNT(*) AS count
 		 FROM url_clicks
 		 WHERE url_id = $1
-		 GROUP BY referer
+		 GROUP BY COALESCE(NULLIF(TRIM(referer), ''), 'Direct')
 		 ORDER BY count DESC
 		 LIMIT 10`,
 		urlID,

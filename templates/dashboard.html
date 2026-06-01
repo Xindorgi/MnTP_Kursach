@@ -22,7 +22,7 @@
 
         <!-- Search Form -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8 card-hover">
-            <form id="analyticsForm" class="flex flex-col sm:flex-row gap-4 items-end">
+            <form id="analyticsForm" class="flex flex-col sm:flex-row gap-4 items-end" method="post" action="#">
                 <div class="flex-1 w-full">
                     <label for="shortCode" class="block text-sm font-medium text-gray-700 mb-1">Short Code</label>
                     <input type="text" id="shortCode" name="code" placeholder="e.g. abc123" required
@@ -178,22 +178,33 @@
             return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
         }
 
+        function displayLabel(value, fallback) {
+            const text = (value ?? '').toString().trim();
+            return text || fallback;
+        }
+
         function updateDashboard(data) {
             destroyCharts();
             const colors = getColorPalette(15);
 
-            // Update stat cards
-            document.getElementById('totalClicks').textContent = data.total_clicks.toLocaleString();
+            // Normalize null arrays to empty arrays
+            const dailyClicks = data.daily_clicks || [];
+            const topCountries = data.top_countries || [];
+            const topReferrers = data.top_referrers || [];
+            const totalClicks = Number(data.total_clicks) || 0;
 
-            const dailyCount = data.daily_clicks.length;
-            const avg = dailyCount > 0 ? Math.round(data.total_clicks / dailyCount) : 0;
+            // Update stat cards
+            document.getElementById('totalClicks').textContent = totalClicks.toLocaleString();
+
+            const dailyCount = dailyClicks.length;
+            const avg = dailyCount > 0 ? Math.round(totalClicks / dailyCount) : 0;
             document.getElementById('dailyAvg').textContent = avg.toLocaleString();
 
-            document.getElementById('countryCount').textContent = data.top_countries.length;
-            document.getElementById('referrerCount').textContent = data.top_referrers.length;
+            document.getElementById('countryCount').textContent = topCountries.length;
+            document.getElementById('referrerCount').textContent = topReferrers.length;
 
             // Show/hide empty state
-            if (data.total_clicks === 0) {
+            if (totalClicks === 0) {
                 document.getElementById('dashboardContent').classList.add('hidden');
                 document.getElementById('emptyState').classList.remove('hidden');
                 return;
@@ -202,8 +213,8 @@
 
             // 1. Daily Clicks Chart (Line)
             const dailyCtx = document.getElementById('dailyChart').getContext('2d');
-            const dailyLabels = data.daily_clicks.map(d => formatDate(d.date)).reverse();
-            const dailyValues = data.daily_clicks.map(d => d.count).reverse();
+            const dailyLabels = dailyClicks.map(d => formatDate(d.date)).reverse();
+            const dailyValues = dailyClicks.map(d => d.count).reverse();
 
             charts.daily = new Chart(dailyCtx, {
                 type: 'line',
@@ -253,8 +264,8 @@
 
             // 2. Top Countries Chart (Bar)
             const countryCtx = document.getElementById('countryChart').getContext('2d');
-            const countryLabels = data.top_countries.map(c => c.country);
-            const countryValues = data.top_countries.map(c => c.count);
+            const countryLabels = topCountries.map(c => displayLabel(c.country, 'Unknown'));
+            const countryValues = topCountries.map(c => c.count);
 
             charts.country = new Chart(countryCtx, {
                 type: 'bar',
@@ -295,8 +306,8 @@
 
             // 3. Top Referrers Chart (Bar)
             const referrerCtx = document.getElementById('referrerChart').getContext('2d');
-            const referrerLabels = data.top_referrers.map(r => r.referrer);
-            const referrerValues = data.top_referrers.map(r => r.count);
+            const referrerLabels = topReferrers.map(r => displayLabel(r.referrer, 'Direct'));
+            const referrerValues = topReferrers.map(r => r.count);
 
             charts.referrer = new Chart(referrerCtx, {
                 type: 'bar',
@@ -337,8 +348,14 @@
 
             // 4. Distribution Chart (Doughnut)
             const distCtx = document.getElementById('distributionChart').getContext('2d');
-            const distLabels = [...data.top_countries.map(c => c.country), ...data.top_referrers.map(r => r.referrer)];
-            const distValues = [...data.top_countries.map(c => c.count), ...data.top_referrers.map(r => r.count)];
+            const distLabels = [
+                ...topCountries.map(c => displayLabel(c.country, 'Unknown')),
+                ...topReferrers.map(r => displayLabel(r.referrer, 'Direct'))
+            ];
+            const distValues = [
+                ...topCountries.map(c => c.count),
+                ...topReferrers.map(r => r.count)
+            ];
 
             // Take top 7 items for the pie chart
             const combined = distLabels.map((label, i) => ({ label, value: distValues[i] }))
@@ -372,21 +389,29 @@
                     }
                 }
             });
+
+            // Charts were hidden during layout; resize after the panel is visible
+            requestAnimationFrame(() => {
+                Object.values(charts).forEach(chart => chart?.resize());
+            });
         }
 
-        // Form submission
-        document.getElementById('analyticsForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
+        let analyticsLoading = false;
+
+        async function loadAnalytics() {
+            if (analyticsLoading) return;
 
             const code = document.getElementById('shortCode').value.trim();
             const token = document.getElementById('token').value.trim();
+            if (!code || !token) return;
+
             const loadBtn = document.getElementById('loadBtn');
             const loadingState = document.getElementById('loadingState');
             const errorState = document.getElementById('errorState');
             const dashboardContent = document.getElementById('dashboardContent');
             const emptyState = document.getElementById('emptyState');
 
-            // Reset UI
+            analyticsLoading = true;
             errorState.classList.add('hidden');
             dashboardContent.classList.add('hidden');
             emptyState.classList.add('hidden');
@@ -394,11 +419,17 @@
             loadBtn.disabled = true;
 
             try {
-                const response = await fetch(`/api/v1/analytics/${encodeURIComponent(code)}?token=${encodeURIComponent(token)}`);
+                const response = await fetch(
+                    `/api/v1/analytics/${encodeURIComponent(code)}?token=${encodeURIComponent(token)}`
+                );
 
                 if (!response.ok) {
-                    const errData = await response.json();
-                    throw new Error(errData.error || `HTTP ${response.status}`);
+                    let message = `HTTP ${response.status}`;
+                    try {
+                        const errData = await response.json();
+                        message = errData.error || message;
+                    } catch (_) { /* non-JSON error body */ }
+                    throw new Error(message);
                 }
 
                 const data = await response.json();
@@ -411,20 +442,31 @@
                 document.getElementById('errorMessage').textContent = err.message;
             } finally {
                 loadBtn.disabled = false;
+                analyticsLoading = false;
             }
+        }
+
+        document.getElementById('analyticsForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            loadAnalytics();
         });
 
-        // Load from URL params on page load
-        document.addEventListener('DOMContentLoaded', () => {
+        function initFromQueryParams() {
             const params = new URLSearchParams(window.location.search);
             const code = params.get('code');
             const token = params.get('token');
-            if (code && token) {
-                document.getElementById('shortCode').value = code;
-                document.getElementById('token').value = token;
-                document.getElementById('analyticsForm').dispatchEvent(new Event('submit'));
-            }
-        });
+            if (!code || !token) return;
+
+            document.getElementById('shortCode').value = code;
+            document.getElementById('token').value = token;
+            loadAnalytics();
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initFromQueryParams);
+        } else {
+            initFromQueryParams();
+        }
     </script>
 </body>
 </html>

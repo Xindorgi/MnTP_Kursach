@@ -5,6 +5,7 @@ package test_e2e
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -50,9 +51,10 @@ func setupTestApp(t *testing.T) (*fiber.App, context.CancelFunc) {
 	redirectHandler := handlers.NewRedirectHandler(urlSvc)
 	analyticsHandler := handlers.NewAnalyticsHandler(urlSvc)
 	dashboardHandler := handlers.NewDashboardHandler()
+	indexHandler := handlers.NewIndexHandler()
 
 	// Setup Fiber app
-	app := transport.SetupRoutes(shortenHandler, redirectHandler, analyticsHandler, dashboardHandler)
+	app := transport.SetupRoutes(shortenHandler, redirectHandler, analyticsHandler, dashboardHandler, indexHandler)
 
 	return app, cancel
 }
@@ -198,4 +200,24 @@ func TestE2EShortenAndRedirect(t *testing.T) {
 		assert.Equal(t, http.StatusForbidden, resp.StatusCode)
 		resp.Body.Close()
 	})
+}
+
+// TestDashboardPage verifies the dashboard HTML is served and includes the fixed loader.
+func TestDashboardPage(t *testing.T) {
+	app, cancel := setupTestApp(t)
+	defer cancel()
+
+	req := httptest.NewRequest(http.MethodGet, "/dashboard", nil)
+	resp, err := app.Test(req, 5000)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	defer resp.Body.Close()
+
+	bodyBytes, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	body := string(bodyBytes)
+
+	assert.Contains(t, body, "Analytics Dashboard")
+	assert.Contains(t, body, "async function loadAnalytics()")
+	assert.NotContains(t, body, `dispatchEvent(new Event('submit'))`)
 }

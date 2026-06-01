@@ -15,6 +15,7 @@ func SetupRoutes(
 	redirectHandler *handlers.RedirectHandler,
 	analyticsHandler *handlers.AnalyticsHandler,
 	dashboardHandler *handlers.DashboardHandler,
+	indexHandler *handlers.IndexHandler,
 ) *fiber.App {
 	app := fiber.New(fiber.Config{
 		AppName: "URL Shortener",
@@ -28,6 +29,9 @@ func SetupRoutes(
 		AllowMethods: "GET, POST, OPTIONS",
 		AllowHeaders: "Content-Type, Authorization",
 	}))
+
+	// Main landing page (must be before /:code to not be caught by redirect)
+	app.Get("/", indexHandler.Handle)
 
 	// Dashboard route (must be before /:code to not be caught by redirect)
 	app.Get("/dashboard", dashboardHandler.Handle)
