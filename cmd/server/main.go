@@ -62,9 +62,10 @@ func main() {
 	shortenHandler := handlers.NewShortenHandler(urlSvc)
 	redirectHandler := handlers.NewRedirectHandler(urlSvc)
 	analyticsHandler := handlers.NewAnalyticsHandler(urlSvc)
+	dashboardHandler := handlers.NewDashboardHandler()
 
 	// Setup routes
-	app := transport.SetupRoutes(shortenHandler, redirectHandler, analyticsHandler)
+	app := transport.SetupRoutes(shortenHandler, redirectHandler, analyticsHandler, dashboardHandler)
 
 	// Graceful shutdown
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)

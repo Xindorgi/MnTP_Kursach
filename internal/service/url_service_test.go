@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
+	"github.com/sqids/sqids-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
@@ -71,8 +73,16 @@ func (m *MockCacheRepository) Delete(ctx context.Context, shortCode string) erro
 	return args.Error(0)
 }
 
+// testHelper is an interface satisfied by both *testing.T and *testing.B.
+type testHelper interface {
+	Helper()
+	Errorf(format string, args ...interface{})
+	Fatalf(format string, args ...interface{})
+}
+
 // newTestService creates a URLService with mocks for testing.
-func newTestService(t *testing.T) (*URLService, *MockURLRepository, *MockClickRepository, *MockCacheRepository) {
+// Accepts both *testing.T and *testing.B via the testHelper interface.
+func newTestService(t testHelper) (*URLService, *MockURLRepository, *MockClickRepository, *MockCacheRepository) {
 	t.Helper()
 	mockURLRepo := new(MockURLRepository)
 	mockClickRepo := new(MockClickRepository)
@@ -80,7 +90,9 @@ func newTestService(t *testing.T) (*URLService, *MockURLRepository, *MockClickRe
 	eventsChan := make(chan domain.ClickEvent, 100)
 
 	svc, err := NewURLService(mockURLRepo, mockClickRepo, mockCacheRepo, eventsChan, "http://localhost:8080")
-	assert.NoError(t, err)
+	if err != nil {
+		t.Fatalf("failed to create URL service: %v", err)
+	}
 
 	return svc, mockURLRepo, mockClickRepo, mockCacheRepo
 }
@@ -176,4 +188,119 @@ func TestResolveURL_NotFound(t *testing.T) {
 	assert.Error(t, err)
 	assert.Nil(t, result)
 	assert.Contains(t, err.Error(), "URL not found")
+}
+
+// Benchmarks
+
+// BenchmarkCreateShortURL measures the performance of creating a short URL.
+// This benchmarks the full flow: Insert → sqids.Encode → UpdateShortCode → Cache Set.
+func BenchmarkCreateShortURL(b *testing.B) {
+	svc, mockURLRepo, _, mockCacheRepo := newTestService(b)
+
+	longURL := "https://example.com/very/long/url/for/benchmarking/" + time.Now().String()
+
+	// Setup mocks to return quickly
+	mockURLRepo.On("Insert", mock.Anything, mock.AnythingOfType("string")).Return(&domain.URL{
+		ID:              42,
+		LongURL:         longURL,
+		ManagementToken: "benchmark-token",
+		CreatedAt:       time.Now(),
+		UpdatedAt:       time.Now(),
+	}, nil)
+	mockURLRepo.On("UpdateShortCode", mock.Anything, int64(42), mock.AnythingOfType("string")).Return(nil)
+	mockCacheRepo.On("Set", mock.Anything, mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return(nil)
+
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		_, err := svc.CreateShortURL(context.Background(), longURL)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+// BenchmarkResolveURL_CacheHit measures redirect performance when URL is cached.
+func BenchmarkResolveURL_CacheHit(b *testing.B) {
+	svc, _, _, mockCacheRepo := newTestService(b)
+
+	shortCode := "abc123"
+	longURL := "https://example.com"
+
+	mockCacheRepo.On("Get", mock.Anything, shortCode).Return(longURL, nil)
+
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		_, err := svc.ResolveURL(context.Background(), shortCode)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+// BenchmarkResolveURL_CacheMiss measures redirect performance when cache is cold.
+func BenchmarkResolveURL_CacheMiss(b *testing.B) {
+	svc, mockURLRepo, _, mockCacheRepo := newTestService(b)
+
+	shortCode := "abc123"
+	longURL := "https://example.com"
+
+	mockURLRepo.On("FindByShortCode", mock.Anything, shortCode).Return(&domain.URL{
+		ID:        42,
+		LongURL:   longURL,
+		ShortCode: shortCode,
+	}, nil)
+	mockCacheRepo.On("Get", mock.Anything, shortCode).Return("", errors.New("cache miss"))
+	mockCacheRepo.On("Set", mock.Anything, shortCode, longURL).Return(nil)
+
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		_, err := svc.ResolveURL(context.Background(), shortCode)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+// BenchmarkSqidsEncode measures the performance of sqids code generation directly.
+func BenchmarkSqidsEncode(b *testing.B) {
+	s, err := sqids.New(sqids.Options{MinLength: 6})
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		_, err := s.Encode([]uint64{uint64(i)})
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+// BenchmarkSqidsDecode measures the performance of sqids code decoding.
+func BenchmarkSqidsDecode(b *testing.B) {
+	s, err := sqids.New(sqids.Options{MinLength: 6})
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	code, err := s.Encode([]uint64{42})
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		_ = s.Decode(code)
+	}
 }

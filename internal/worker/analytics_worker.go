@@ -18,7 +18,7 @@ const (
 	// BatchSize is the number of events to accumulate before flushing to DB.
 	BatchSize = 50
 	// FlushInterval is the maximum time to wait before flushing a partial batch.
-	FlushInterval = 5 * time.Second
+	FlushInterval = 1 * time.Second
 )
 
 // AnalyticsWorker processes click events asynchronously.

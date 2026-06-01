@@ -30,6 +30,13 @@ linters-settings:
       - name: unused-parameter
       - name: unreachable-code
       - name: redefines-builtin-id
+  gosec:
+    excludes:
+      - G107  # Allow potential HTTP request injection (false positives for URL shortening)
+  staticcheck:
+    checks:
+      - "all"
+      - "-ST1000" # Allow missing package comments in test files
 
 linters:
   enable:
@@ -48,6 +55,11 @@ linters:
     - unconvert
     - whitespace
     - gosec
+    - nilerr
+    - errorlint
+    - durationcheck
+    - noctx
+    - usestdlibvars
 
 run:
   timeout: 5m
@@ -60,5 +72,11 @@ issues:
         - gocyclo
         - errcheck
         - gosec
+        - noctx
+        - durationcheck
   max-issues-per-linter: 0
   max-same-issues: 0
+
+output:
+  formats:
+    - format: colored-line-number

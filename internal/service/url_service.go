@@ -110,14 +110,20 @@ func (s *URLService) ResolveURL(ctx context.Context, shortCode string) (*domain.
 
 // RecordClick sends a click event to the analytics worker channel.
 // This is non-blocking; if the channel is full, the event is dropped.
+// Deprecated: Use RecordClickByID instead to avoid an extra DB lookup.
 func (s *URLService) RecordClick(ctx context.Context, shortCode, ip, userAgent, referer string) {
 	url, err := s.urlRepo.FindByShortCode(ctx, shortCode)
 	if err != nil {
 		return
 	}
+	s.RecordClickByID(ctx, url.ID, ip, userAgent, referer)
+}
 
+// RecordClickByID sends a click event to the analytics worker channel using the URL ID directly.
+// This avoids an extra database lookup and works correctly with cache hits.
+func (s *URLService) RecordClickByID(ctx context.Context, urlID int64, ip, userAgent, referer string) {
 	event := domain.ClickEvent{
-		URLID:     url.ID,
+		URLID:     urlID,
 		IPAddress: ip,
 		UserAgent: userAgent,
 		Referer:   referer,
