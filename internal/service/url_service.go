@@ -18,6 +18,11 @@ type URLService struct {
 	baseURL   string
 }
 
+// BaseURL returns the base URL of the service.
+func (s *URLService) BaseURL() string {
+	return s.baseURL
+}
+
 // NewURLService creates a new URLService with dependency injection.
 func NewURLService(
 	urlRepo repository.URLRepository,
