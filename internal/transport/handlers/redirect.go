@@ -4,6 +4,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/v8950/url-shortener/internal/service"
+	"github.com/v8950/url-shortener/internal/transport/clientip"
 )
 
 // RedirectHandler handles GET /:code requests.
@@ -36,7 +37,7 @@ func (h *RedirectHandler) Handle(c *fiber.Ctx) error {
 	h.urlService.RecordClick(
 		c.Context(),
 		shortCode,
-		c.IP(),
+		clientip.FromRequest(c),
 		c.Get("User-Agent"),
 		c.Get("Referer"),
 	)

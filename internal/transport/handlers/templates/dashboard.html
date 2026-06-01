@@ -183,6 +183,17 @@
             return text || fallback;
         }
 
+        function displayCountry(code) {
+            const value = displayLabel(code, 'Unknown');
+            if (value === 'LOCAL') return 'Local network';
+            if (value === 'Unknown') return value;
+            try {
+                return new Intl.DisplayNames(['en'], { type: 'region' }).of(value) || value;
+            } catch (_) {
+                return value;
+            }
+        }
+
         function updateDashboard(data) {
             destroyCharts();
             const colors = getColorPalette(15);
@@ -264,7 +275,7 @@
 
             // 2. Top Countries Chart (Bar)
             const countryCtx = document.getElementById('countryChart').getContext('2d');
-            const countryLabels = topCountries.map(c => displayLabel(c.country, 'Unknown'));
+            const countryLabels = topCountries.map(c => displayCountry(c.country));
             const countryValues = topCountries.map(c => c.count);
 
             charts.country = new Chart(countryCtx, {
@@ -349,7 +360,7 @@
             // 4. Distribution Chart (Doughnut)
             const distCtx = document.getElementById('distributionChart').getContext('2d');
             const distLabels = [
-                ...topCountries.map(c => displayLabel(c.country, 'Unknown')),
+                ...topCountries.map(c => displayCountry(c.country)),
                 ...topReferrers.map(r => displayLabel(r.referrer, 'Direct'))
             ];
             const distValues = [

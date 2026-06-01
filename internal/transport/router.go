@@ -19,6 +19,16 @@ func SetupRoutes(
 ) *fiber.App {
 	app := fiber.New(fiber.Config{
 		AppName: "URL Shortener",
+		// Trust X-Forwarded-For from Docker bridge / reverse proxies so GeoIP sees the real client IP.
+		ProxyHeader:             fiber.HeaderXForwardedFor,
+		EnableTrustedProxyCheck: true,
+		TrustedProxies: []string{
+			"127.0.0.1/8",
+			"10.0.0.0/8",
+			"172.16.0.0/12",
+			"192.168.0.0/16",
+			"::1/128",
+		},
 	})
 
 	// Global middlewares

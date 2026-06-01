@@ -1,0 +1,1 @@
+ALTER TABLE url_clicks ALTER COLUMN country TYPE VARCHAR(2);

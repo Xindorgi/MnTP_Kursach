@@ -19,6 +19,8 @@ const (
 	BatchSize = 50
 	// FlushInterval is the maximum time to wait before flushing a partial batch.
 	FlushInterval = 1 * time.Second
+	// CountryLocal marks clicks from private/loopback IPs (localhost, Docker bridge, LAN).
+	CountryLocal = "LOCAL"
 )
 
 // AnalyticsWorker processes click events asynchronously.
@@ -45,6 +47,8 @@ func NewAnalyticsWorker(
 		} else {
 			log.Printf("GeoIP database loaded from %s", geoIPDBPath)
 		}
+	} else {
+		log.Println("WARNING: GEOIP_DB_PATH is empty. GeoIP lookups are disabled.")
 	}
 
 	return &AnalyticsWorker{
@@ -102,6 +106,7 @@ func (w *AnalyticsWorker) Start(ctx context.Context) {
 // enrichWithGeoIP looks up the IP address and fills in country and city.
 func (w *AnalyticsWorker) enrichWithGeoIP(event *domain.ClickEvent) {
 	if event.IPAddress == "" {
+		event.Country = CountryLocal
 		return
 	}
 
@@ -110,8 +115,13 @@ func (w *AnalyticsWorker) enrichWithGeoIP(event *domain.ClickEvent) {
 		return
 	}
 
-	// Skip private IPs
+	// Private/loopback IPs cannot be resolved by MaxMind — label explicitly for the dashboard.
 	if isPrivateIP(ip) {
+		event.Country = CountryLocal
+		return
+	}
+
+	if w.geoIP == nil {
 		return
 	}
 

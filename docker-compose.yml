@@ -51,6 +51,9 @@ services:
       REDIS_PORT: 6379
       REDIS_PASSWORD: ""
       BASE_URL: ${BASE_URL:-http://localhost:8080}
+      GEOIP_DB_PATH: ${GEOIP_DB_PATH:-/app/geoip/GeoLite2-City.mmdb}
+    volumes:
+      - ./geoip:/app/geoip:ro
     depends_on:
       postgres:
         condition: service_healthy
