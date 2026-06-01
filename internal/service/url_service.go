@@ -70,7 +70,7 @@ func (s *URLService) CreateShortURL(ctx context.Context, longURL string) (*domai
 	if err := s.urlRepo.UpdateShortCode(ctx, url.ID, shortCode); err != nil {
 		return nil, fmt.Errorf("failed to update short code: %w", err)
 	}
-	url.ShortCode = shortCode
+	url.ShortCode = &shortCode
 
 	// 4. Cache the result
 	if err := s.cacheRepo.Set(ctx, shortCode, longURL); err != nil {
@@ -89,7 +89,7 @@ func (s *URLService) ResolveURL(ctx context.Context, shortCode string) (*domain.
 	if err == nil && longURL != "" {
 		// Cache hit — return minimal URL object
 		return &domain.URL{
-			ShortCode: shortCode,
+			ShortCode: &shortCode,
 			LongURL:   longURL,
 		}, nil
 	}

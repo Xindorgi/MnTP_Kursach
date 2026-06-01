@@ -44,7 +44,7 @@ func (r *URLRepository) Insert(ctx context.Context, longURL string) (*domain.URL
 	url := &domain.URL{}
 	err := r.pool.QueryRow(ctx,
 		`INSERT INTO urls (long_url) VALUES ($1)
-		 RETURNING id, long_url, short_code, management_token, created_at, updated_at`,
+		 RETURNING id, long_url, short_code, management_token::text, created_at, updated_at`,
 		longURL,
 	).Scan(&url.ID, &url.LongURL, &url.ShortCode, &url.ManagementToken, &url.CreatedAt, &url.UpdatedAt)
 	if err != nil {
@@ -57,7 +57,7 @@ func (r *URLRepository) Insert(ctx context.Context, longURL string) (*domain.URL
 func (r *URLRepository) FindByShortCode(ctx context.Context, shortCode string) (*domain.URL, error) {
 	url := &domain.URL{}
 	err := r.pool.QueryRow(ctx,
-		`SELECT id, long_url, short_code, management_token, created_at, updated_at
+		`SELECT id, long_url, short_code, management_token::text, created_at, updated_at
 		 FROM urls WHERE short_code = $1`,
 		shortCode,
 	).Scan(&url.ID, &url.LongURL, &url.ShortCode, &url.ManagementToken, &url.CreatedAt, &url.UpdatedAt)
@@ -83,7 +83,7 @@ func (r *URLRepository) UpdateShortCode(ctx context.Context, id int64, shortCode
 func (r *URLRepository) FindByManagementToken(ctx context.Context, token string) (*domain.URL, error) {
 	url := &domain.URL{}
 	err := r.pool.QueryRow(ctx,
-		`SELECT id, long_url, short_code, management_token, created_at, updated_at
+		`SELECT id, long_url, short_code, management_token::text, created_at, updated_at
 		 FROM urls WHERE management_token = $1`,
 		token,
 	).Scan(&url.ID, &url.LongURL, &url.ShortCode, &url.ManagementToken, &url.CreatedAt, &url.UpdatedAt)
@@ -136,7 +136,7 @@ func (r *InMemoryURLRepository) FindByShortCode(ctx context.Context, shortCode s
 	defer r.mu.RUnlock()
 
 	for _, u := range r.urls {
-		if u.ShortCode == shortCode {
+		if u.ShortCode != nil && *u.ShortCode == shortCode {
 			return u, nil
 		}
 	}
@@ -149,7 +149,7 @@ func (r *InMemoryURLRepository) UpdateShortCode(ctx context.Context, id int64, s
 
 	for _, u := range r.urls {
 		if u.ID == id {
-			u.ShortCode = shortCode
+			u.ShortCode = &shortCode
 			u.UpdatedAt = time.Now()
 			return nil
 		}

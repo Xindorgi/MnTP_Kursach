@@ -32,16 +32,13 @@ LABEL org.opencontainers.image.version="1.0.0"
 WORKDIR /app
 
 # Copy only the binary and necessary runtime files
+# Note: HTML templates are embedded via go:embed, no need to copy them separately
 COPY --from=builder /build/server .
 COPY --from=builder /build/migrations ./migrations
-COPY --from=builder /build/templates ./templates
 
 # Use non-root user (distroless nonroot is uid 65532)
 USER 65532:65532
 
 EXPOSE 8080
-
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD ["/app/server", "-healthcheck"] || exit 1
 
 ENTRYPOINT ["/app/server"]

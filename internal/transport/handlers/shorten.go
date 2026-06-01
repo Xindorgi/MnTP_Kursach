@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"log"
 	"net/url"
 
 	"github.com/gofiber/fiber/v2"
@@ -56,6 +57,7 @@ func (h *ShortenHandler) Handle(c *fiber.Ctx) error {
 
 	created, err := h.urlService.CreateShortURL(c.Context(), req.URL)
 	if err != nil {
+		log.Printf("ERROR: failed to create short URL: %v", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "failed to create short URL",
 		})
@@ -63,9 +65,14 @@ func (h *ShortenHandler) Handle(c *fiber.Ctx) error {
 
 	baseURL := h.urlService.BaseURL() // We'll need to expose this
 
+	shortCode := ""
+	if created.ShortCode != nil {
+		shortCode = *created.ShortCode
+	}
+
 	return c.Status(fiber.StatusCreated).JSON(shortenResponse{
-		ShortURL:        baseURL + "/" + created.ShortCode,
-		ShortCode:       created.ShortCode,
+		ShortURL:        baseURL + "/" + shortCode,
+		ShortCode:       shortCode,
 		ManagementToken: created.ManagementToken,
 	})
 }

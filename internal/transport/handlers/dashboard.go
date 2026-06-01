@@ -18,7 +18,7 @@ type DashboardHandler struct {
 
 // NewDashboardHandler creates a new DashboardHandler with the embedded template.
 func NewDashboardHandler() *DashboardHandler {
-	tmpl, err := template.ParseFS(dashboardHTML, "templates/dashboard.html")
+	tmpl, err := template.New("dashboard.html").ParseFS(dashboardHTML, "templates/dashboard.html")
 	if err != nil {
 		log.Fatalf("failed to parse dashboard template: %v", err)
 	}
@@ -28,5 +28,5 @@ func NewDashboardHandler() *DashboardHandler {
 // Handle renders the analytics dashboard HTML page.
 func (h *DashboardHandler) Handle(c *fiber.Ctx) error {
 	c.Set("Content-Type", "text/html; charset=utf-8")
-	return h.tmpl.ExecuteTemplate(c, "templates/dashboard.html", nil)
+	return h.tmpl.ExecuteTemplate(c, "dashboard.html", nil)
 }

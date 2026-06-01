@@ -63,7 +63,7 @@ func (r *ClickRepository) GetStats(ctx context.Context, urlID int64) (*domain.Cl
 
 	// Daily clicks (last 30 days)
 	rows, err := r.pool.Query(ctx,
-		`SELECT DATE(clicked_at) as date, COUNT(*) as count
+		`SELECT DATE(clicked_at)::text as date, COUNT(*) as count
 		 FROM url_clicks
 		 WHERE url_id = $1 AND clicked_at >= NOW() - INTERVAL '30 days'
 		 GROUP BY DATE(clicked_at)

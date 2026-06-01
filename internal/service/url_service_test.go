@@ -116,7 +116,8 @@ func TestCreateShortURL_Success(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, result)
 	assert.Equal(t, longURL, result.LongURL)
-	assert.NotEmpty(t, result.ShortCode)
+	assert.NotNil(t, result.ShortCode)
+	assert.NotEmpty(t, *result.ShortCode)
 	assert.Equal(t, "test-token-uuid", result.ManagementToken)
 
 	mockURLRepo.AssertExpectations(t)
@@ -147,7 +148,8 @@ func TestResolveURL_CacheHit(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.NotNil(t, result)
-	assert.Equal(t, shortCode, result.ShortCode)
+	assert.NotNil(t, result.ShortCode)
+	assert.Equal(t, shortCode, *result.ShortCode)
 	assert.Equal(t, longURL, result.LongURL)
 
 	// DB should NOT be called on cache hit
@@ -162,7 +164,7 @@ func TestResolveURL_CacheMiss(t *testing.T) {
 	expectedURL := &domain.URL{
 		ID:        42,
 		LongURL:   longURL,
-		ShortCode: shortCode,
+		ShortCode: &shortCode,
 	}
 
 	mockCacheRepo.On("Get", mock.Anything, shortCode).Return("", errors.New("cache miss"))
@@ -251,7 +253,7 @@ func BenchmarkResolveURL_CacheMiss(b *testing.B) {
 	mockURLRepo.On("FindByShortCode", mock.Anything, shortCode).Return(&domain.URL{
 		ID:        42,
 		LongURL:   longURL,
-		ShortCode: shortCode,
+		ShortCode: &shortCode,
 	}, nil)
 	mockCacheRepo.On("Get", mock.Anything, shortCode).Return("", errors.New("cache miss"))
 	mockCacheRepo.On("Set", mock.Anything, shortCode, longURL).Return(nil)
