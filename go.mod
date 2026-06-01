@@ -5,6 +5,7 @@ go 1.26.1
 require (
 	github.com/gofiber/fiber/v2 v2.52.13
 	github.com/jackc/pgx/v5 v5.9.2
+	github.com/oschwald/geoip2-golang v1.13.0
 	github.com/redis/go-redis/v9 v9.20.0
 	github.com/sqids/sqids-go v0.4.1
 	github.com/stretchr/testify v1.11.1
@@ -23,6 +24,7 @@ require (
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.16 // indirect
+	github.com/oschwald/maxminddb-golang v1.13.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/rogpeppe/go-internal v1.15.0 // indirect

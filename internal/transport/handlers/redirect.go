@@ -32,6 +32,15 @@ func (h *RedirectHandler) Handle(c *fiber.Ctx) error {
 		})
 	}
 
+	// Record click event asynchronously (non-blocking)
+	h.urlService.RecordClick(
+		c.Context(),
+		shortCode,
+		c.IP(),
+		c.Get("User-Agent"),
+		c.Get("Referer"),
+	)
+
 	// Redirect with 301 Moved Permanently
 	return c.Redirect(url.LongURL, fiber.StatusMovedPermanently)
 }

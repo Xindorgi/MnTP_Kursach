@@ -36,6 +36,21 @@ func (m *MockURLRepository) FindByManagementToken(ctx context.Context, token str
 	return args.Get(0).(*domain.URL), args.Error(1)
 }
 
+// MockClickRepository is a mock implementation of repository.ClickRepository.
+type MockClickRepository struct {
+	mock.Mock
+}
+
+func (m *MockClickRepository) BatchInsert(ctx context.Context, events []domain.ClickEvent) error {
+	args := m.Called(ctx, events)
+	return args.Error(0)
+}
+
+func (m *MockClickRepository) GetStats(ctx context.Context, urlID int64) (*domain.ClickStats, error) {
+	args := m.Called(ctx, urlID)
+	return args.Get(0).(*domain.ClickStats), args.Error(1)
+}
+
 // MockCacheRepository is a mock implementation of repository.CacheRepository.
 type MockCacheRepository struct {
 	mock.Mock
@@ -56,12 +71,22 @@ func (m *MockCacheRepository) Delete(ctx context.Context, shortCode string) erro
 	return args.Error(0)
 }
 
-func TestCreateShortURL_Success(t *testing.T) {
+// newTestService creates a URLService with mocks for testing.
+func newTestService(t *testing.T) (*URLService, *MockURLRepository, *MockClickRepository, *MockCacheRepository) {
+	t.Helper()
 	mockURLRepo := new(MockURLRepository)
+	mockClickRepo := new(MockClickRepository)
 	mockCacheRepo := new(MockCacheRepository)
+	eventsChan := make(chan domain.ClickEvent, 100)
 
-	svc, err := NewURLService(mockURLRepo, mockCacheRepo, "http://localhost:8080")
+	svc, err := NewURLService(mockURLRepo, mockClickRepo, mockCacheRepo, eventsChan, "http://localhost:8080")
 	assert.NoError(t, err)
+
+	return svc, mockURLRepo, mockClickRepo, mockCacheRepo
+}
+
+func TestCreateShortURL_Success(t *testing.T) {
+	svc, mockURLRepo, _, mockCacheRepo := newTestService(t)
 
 	longURL := "https://example.com/very/long/url"
 	expectedURL := &domain.URL{
@@ -87,11 +112,7 @@ func TestCreateShortURL_Success(t *testing.T) {
 }
 
 func TestCreateShortURL_InsertError(t *testing.T) {
-	mockURLRepo := new(MockURLRepository)
-	mockCacheRepo := new(MockCacheRepository)
-
-	svc, err := NewURLService(mockURLRepo, mockCacheRepo, "http://localhost:8080")
-	assert.NoError(t, err)
+	svc, mockURLRepo, _, _ := newTestService(t)
 
 	mockURLRepo.On("Insert", mock.Anything, mock.Anything).Return((*domain.URL)(nil), errors.New("db error"))
 
@@ -103,11 +124,7 @@ func TestCreateShortURL_InsertError(t *testing.T) {
 }
 
 func TestResolveURL_CacheHit(t *testing.T) {
-	mockURLRepo := new(MockURLRepository)
-	mockCacheRepo := new(MockCacheRepository)
-
-	svc, err := NewURLService(mockURLRepo, mockCacheRepo, "http://localhost:8080")
-	assert.NoError(t, err)
+	svc, mockURLRepo, _, mockCacheRepo := newTestService(t)
 
 	shortCode := "abc123"
 	longURL := "https://example.com"
@@ -126,11 +143,7 @@ func TestResolveURL_CacheHit(t *testing.T) {
 }
 
 func TestResolveURL_CacheMiss(t *testing.T) {
-	mockURLRepo := new(MockURLRepository)
-	mockCacheRepo := new(MockCacheRepository)
-
-	svc, err := NewURLService(mockURLRepo, mockCacheRepo, "http://localhost:8080")
-	assert.NoError(t, err)
+	svc, mockURLRepo, _, mockCacheRepo := newTestService(t)
 
 	shortCode := "abc123"
 	longURL := "https://example.com"
@@ -153,11 +166,7 @@ func TestResolveURL_CacheMiss(t *testing.T) {
 }
 
 func TestResolveURL_NotFound(t *testing.T) {
-	mockURLRepo := new(MockURLRepository)
-	mockCacheRepo := new(MockCacheRepository)
-
-	svc, err := NewURLService(mockURLRepo, mockCacheRepo, "http://localhost:8080")
-	assert.NoError(t, err)
+	svc, mockURLRepo, _, mockCacheRepo := newTestService(t)
 
 	mockCacheRepo.On("Get", mock.Anything, "nonexistent").Return("", errors.New("cache miss"))
 	mockURLRepo.On("FindByShortCode", mock.Anything, "nonexistent").Return((*domain.URL)(nil), errors.New("not found"))

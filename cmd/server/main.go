@@ -13,6 +13,7 @@ import (
 	"github.com/v8950/url-shortener/internal/service"
 	"github.com/v8950/url-shortener/internal/transport"
 	"github.com/v8950/url-shortener/internal/transport/handlers"
+	"github.com/v8950/url-shortener/internal/worker"
 )
 
 func main() {
@@ -21,6 +22,7 @@ func main() {
 
 	// Initialize repositories
 	var urlRepo repository.URLRepository
+	var clickRepo repository.ClickRepository
 	var cacheRepo repository.CacheRepository
 
 	// Try to connect to PostgreSQL
@@ -29,8 +31,10 @@ func main() {
 		log.Printf("WARNING: PostgreSQL not available, using in-memory fallback: %v", err)
 		// Fallback to in-memory repository for development
 		urlRepo = postgres.NewInMemoryURLRepository()
+		clickRepo = postgres.NewInMemoryClickRepository()
 	} else {
 		urlRepo = pgRepo
+		clickRepo = postgres.NewClickRepositoryFromPool(pgRepo.Pool())
 	}
 
 	// Try to connect to Redis
@@ -42,8 +46,14 @@ func main() {
 		cacheRepo = redisCache
 	}
 
+	// Initialize Analytics Worker
+	analyticsWorker, err := worker.NewAnalyticsWorker(clickRepo, cfg.GeoIPDBPath)
+	if err != nil {
+		log.Fatalf("Failed to initialize analytics worker: %v", err)
+	}
+
 	// Initialize services
-	urlSvc, err := service.NewURLService(urlRepo, cacheRepo, cfg.BaseURL)
+	urlSvc, err := service.NewURLService(urlRepo, clickRepo, cacheRepo, analyticsWorker.EventsChan(), cfg.BaseURL)
 	if err != nil {
 		log.Fatalf("Failed to initialize URL service: %v", err)
 	}
@@ -51,13 +61,17 @@ func main() {
 	// Initialize handlers
 	shortenHandler := handlers.NewShortenHandler(urlSvc)
 	redirectHandler := handlers.NewRedirectHandler(urlSvc)
+	analyticsHandler := handlers.NewAnalyticsHandler(urlSvc)
 
 	// Setup routes
-	app := transport.SetupRoutes(shortenHandler, redirectHandler)
+	app := transport.SetupRoutes(shortenHandler, redirectHandler, analyticsHandler)
 
 	// Graceful shutdown
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
+
+	// Start analytics worker
+	go analyticsWorker.Start(ctx)
 
 	// Start server in a goroutine
 	go func() {
@@ -71,8 +85,11 @@ func main() {
 	<-ctx.Done()
 	log.Println("Shutting down server...")
 
+	// Shutdown server first, then close worker
 	if err := app.Shutdown(); err != nil {
 		log.Fatalf("Server shutdown error: %v", err)
 	}
+
+	analyticsWorker.Close()
 	log.Println("Server stopped gracefully")
 }

@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/sqids/sqids-go"
 
@@ -12,10 +13,12 @@ import (
 
 // URLService handles business logic for URL shortening.
 type URLService struct {
-	urlRepo   repository.URLRepository
-	cacheRepo repository.CacheRepository
-	sqids     *sqids.Sqids
-	baseURL   string
+	urlRepo    repository.URLRepository
+	clickRepo  repository.ClickRepository
+	cacheRepo  repository.CacheRepository
+	eventsChan chan<- domain.ClickEvent
+	sqids      *sqids.Sqids
+	baseURL    string
 }
 
 // BaseURL returns the base URL of the service.
@@ -26,7 +29,9 @@ func (s *URLService) BaseURL() string {
 // NewURLService creates a new URLService with dependency injection.
 func NewURLService(
 	urlRepo repository.URLRepository,
+	clickRepo repository.ClickRepository,
 	cacheRepo repository.CacheRepository,
+	eventsChan chan<- domain.ClickEvent,
 	baseURL string,
 ) (*URLService, error) {
 	s, err := sqids.New(sqids.Options{
@@ -37,10 +42,12 @@ func NewURLService(
 	}
 
 	return &URLService{
-		urlRepo:   urlRepo,
-		cacheRepo: cacheRepo,
-		sqids:     s,
-		baseURL:   baseURL,
+		urlRepo:    urlRepo,
+		clickRepo:  clickRepo,
+		cacheRepo:  cacheRepo,
+		eventsChan: eventsChan,
+		sqids:      s,
+		baseURL:    baseURL,
 	}, nil
 }
 
@@ -101,6 +108,31 @@ func (s *URLService) ResolveURL(ctx context.Context, shortCode string) (*domain.
 	return url, nil
 }
 
+// RecordClick sends a click event to the analytics worker channel.
+// This is non-blocking; if the channel is full, the event is dropped.
+func (s *URLService) RecordClick(ctx context.Context, shortCode, ip, userAgent, referer string) {
+	url, err := s.urlRepo.FindByShortCode(ctx, shortCode)
+	if err != nil {
+		return
+	}
+
+	event := domain.ClickEvent{
+		URLID:     url.ID,
+		IPAddress: ip,
+		UserAgent: userAgent,
+		Referer:   referer,
+		ClickedAt: time.Now(),
+	}
+
+	// Non-blocking send to channel
+	select {
+	case s.eventsChan <- event:
+		// Event sent successfully
+	default:
+		// Channel full, drop event to avoid blocking the redirect
+	}
+}
+
 // GetAnalytics returns aggregated analytics for a given short code.
 // Validates ownership via management token.
 func (s *URLService) GetAnalytics(ctx context.Context, shortCode, token string) (*domain.ClickStats, error) {
@@ -113,9 +145,12 @@ func (s *URLService) GetAnalytics(ctx context.Context, shortCode, token string) 
 		return nil, fmt.Errorf("invalid management token")
 	}
 
-	// Analytics will be fetched via ClickRepository (implemented later)
-	// For now return empty stats
-	return &domain.ClickStats{}, nil
+	stats, err := s.clickRepo.GetStats(ctx, url.ID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get analytics: %w", err)
+	}
+
+	return stats, nil
 }
 
 // GetURLByShortCode retrieves a URL by its short code (for internal use).

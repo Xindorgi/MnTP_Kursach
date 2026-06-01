@@ -13,6 +13,7 @@ import (
 func SetupRoutes(
 	shortenHandler *handlers.ShortenHandler,
 	redirectHandler *handlers.RedirectHandler,
+	analyticsHandler *handlers.AnalyticsHandler,
 ) *fiber.App {
 	app := fiber.New(fiber.Config{
 		AppName: "URL Shortener",
@@ -30,6 +31,7 @@ func SetupRoutes(
 	// API v1 routes
 	v1 := app.Group("/api/v1")
 	v1.Post("/shorten", shortenHandler.Handle)
+	v1.Get("/analytics/:code", analyticsHandler.Handle)
 
 	// Redirect route (must be last to not conflict with API routes)
 	app.Get("/:code", redirectHandler.Handle)
