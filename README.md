@@ -145,16 +145,12 @@ cd url-shortener
 #    Зарегистрироваться на https://www.maxmind.com/ и скачать
 #    GeoLite2-City.mmdb в директорию ./geoip/
 
-# 3. Запустить (PostgreSQL применит SQL-миграции автоматически при первом запуске)
+# 3. Запустить (миграции накатываются автоматически при старте приложения)
 docker compose up -d
 
 # 4. Проверить
 curl http://localhost:8080/dashboard
 ```
-
-> **Важно:** миграции из `migrations/*.up.sql` выполняются только при **первом** создании тома PostgreSQL.
-> Если база уже существовала без таблиц, либо примените миграции вручную (см. раздел «Миграции»), либо пересоздайте том:
-> `docker compose down -v && docker compose up -d`
 
 ### Локальный запуск (без Docker)
 
@@ -221,7 +217,10 @@ go run ./cmd/server
 
 ### Docker Compose
 
-При **первом** `docker compose up` PostgreSQL автоматически выполняет все `*.up.sql`, смонтированные в `/docker-entrypoint-initdb.d/`.
+Миграции накатываются **автоматически** при каждом запуске приложения. Встроенный мигратор ([`internal/migrator`](internal/migrator/migrator.go)):
+1. Создаёт таблицу `schema_migrations` для отслеживания применённых миграций
+2. Сравнивает файлы из `migrations/` с уже выполненными
+3. Применяет новые миграции по одной в отдельных транзакциях
 
 Проверить, что таблицы созданы:
 
@@ -229,12 +228,10 @@ go run ./cmd/server
 docker exec url-shortener-db psql -U urlshortener -d urlshortener -c "\dt"
 ```
 
-Если том уже существовал до добавления init-скриптов, примените миграции вручную:
+Посмотреть, какие миграции уже применены:
 
 ```bash
-docker exec -i url-shortener-db psql -U urlshortener -d urlshortener < migrations/000001_create_urls_table.up.sql
-docker exec -i url-shortener-db psql -U urlshortener -d urlshortener < migrations/000002_create_url_clicks_table.up.sql
-docker exec -i url-shortener-db psql -U urlshortener -d urlshortener < migrations/000003_expand_country_column.up.sql
+docker exec url-shortener-db psql -U urlshortener -d urlshortener -c "SELECT * FROM schema_migrations"
 ```
 
 ### Локально (без Docker)
@@ -261,6 +258,7 @@ psql -d urlshortener -f migrations/000001_create_urls_table.down.sql
 ├── internal/
 │   ├── config/              # Конфигурация
 │   ├── domain/              # Модели данных (URL, ClickEvent, ClickStats)
+│   ├── migrator/            # Автоматические миграции БД при старте
 │   ├── repository/
 │   │   ├── interfaces.go    # Интерфейсы репозиториев
 │   │   ├── postgres/        # Реализация PostgreSQL + in-memory fallback

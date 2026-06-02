@@ -7,6 +7,7 @@ import (
 	"syscall"
 
 	"github.com/v8950/url-shortener/internal/config"
+	"github.com/v8950/url-shortener/internal/migrator"
 	"github.com/v8950/url-shortener/internal/repository"
 	"github.com/v8950/url-shortener/internal/repository/postgres"
 	"github.com/v8950/url-shortener/internal/repository/redis"
@@ -35,6 +36,11 @@ func main() {
 	} else {
 		urlRepo = pgRepo
 		clickRepo = postgres.NewClickRepositoryFromPool(pgRepo.Pool())
+
+		// Run database migrations
+		if err := migrator.RunUp(context.Background(), pgRepo.Pool(), "migrations"); err != nil {
+			log.Fatalf("Failed to run migrations: %v", err)
+		}
 	}
 
 	// Try to connect to Redis
