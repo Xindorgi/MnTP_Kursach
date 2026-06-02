@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/v8950/url-shortener/internal/domain"
+	"github.com/Xindorgi/MnTP_Kursach/internal/domain"
 )
 
 func TestIsPrivateIP(t *testing.T) {
@@ -65,3 +65,4 @@ func TestEnrichWithGeoIP_EmptyIPMarkedLocal(t *testing.T) {
 
 	assert.Equal(t, CountryLocal, event.Country)
 }
+

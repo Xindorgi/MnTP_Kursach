@@ -7,8 +7,8 @@ import (
 
 	"github.com/sqids/sqids-go"
 
-	"github.com/v8950/url-shortener/internal/domain"
-	"github.com/v8950/url-shortener/internal/repository"
+	"github.com/Xindorgi/MnTP_Kursach/internal/domain"
+	"github.com/Xindorgi/MnTP_Kursach/internal/repository"
 )
 
 // URLService handles business logic for URL shortening.
@@ -163,3 +163,4 @@ func (s *URLService) GetAnalytics(ctx context.Context, shortCode, token string) 
 func (s *URLService) GetURLByShortCode(ctx context.Context, shortCode string) (*domain.URL, error) {
 	return s.urlRepo.FindByShortCode(ctx, shortCode)
 }
+

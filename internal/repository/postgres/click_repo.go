@@ -8,7 +8,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/v8950/url-shortener/internal/domain"
+	"github.com/Xindorgi/MnTP_Kursach/internal/domain"
 )
 
 // ClickRepository implements repository.ClickRepository using PostgreSQL.
@@ -203,3 +203,4 @@ func (r *InMemoryClickRepository) GetStats(ctx context.Context, urlID int64) (*d
 
 	return stats, nil
 }
+

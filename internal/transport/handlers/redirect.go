@@ -3,8 +3,8 @@ package handlers
 import (
 	"github.com/gofiber/fiber/v2"
 
-	"github.com/v8950/url-shortener/internal/service"
-	"github.com/v8950/url-shortener/internal/transport/clientip"
+	"github.com/Xindorgi/MnTP_Kursach/internal/service"
+	"github.com/Xindorgi/MnTP_Kursach/internal/transport/clientip"
 )
 
 // RedirectHandler handles GET /:code requests.
@@ -45,3 +45,4 @@ func (h *RedirectHandler) Handle(c *fiber.Ctx) error {
 	// Redirect with 301 Moved Permanently
 	return c.Redirect(url.LongURL, fiber.StatusMovedPermanently)
 }
+

@@ -1,4 +1,4 @@
-module github.com/v8950/url-shortener
+module github.com/Xindorgi/MnTP_Kursach
 
 go 1.26.1
 

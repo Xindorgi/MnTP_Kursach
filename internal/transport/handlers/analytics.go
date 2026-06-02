@@ -3,7 +3,7 @@ package handlers
 import (
 	"github.com/gofiber/fiber/v2"
 
-	"github.com/v8950/url-shortener/internal/service"
+	"github.com/Xindorgi/MnTP_Kursach/internal/service"
 )
 
 // AnalyticsHandler handles GET /api/v1/analytics/:code requests.
@@ -42,3 +42,4 @@ func (h *AnalyticsHandler) Handle(c *fiber.Ctx) error {
 
 	return c.JSON(stats)
 }
+

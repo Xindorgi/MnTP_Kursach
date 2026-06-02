@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/v8950/url-shortener/internal/domain"
+	"github.com/Xindorgi/MnTP_Kursach/internal/domain"
 )
 
 func TestInMemoryClickRepository_GetStats_AggregatesCountries(t *testing.T) {
@@ -46,3 +46,4 @@ func countryClicks(stats *domain.ClickStats, country string) int64 {
 	}
 	return 0
 }
+

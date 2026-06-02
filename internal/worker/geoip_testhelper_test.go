@@ -48,3 +48,4 @@ func newAnalyticsWorkerWithGeoIP(t *testing.T) *AnalyticsWorker {
 	t.Cleanup(w.Close)
 	return w
 }
+

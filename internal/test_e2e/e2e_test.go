@@ -16,13 +16,13 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/v8950/url-shortener/internal/domain"
-	"github.com/v8950/url-shortener/internal/repository/postgres"
-	"github.com/v8950/url-shortener/internal/repository/redis"
-	"github.com/v8950/url-shortener/internal/service"
-	"github.com/v8950/url-shortener/internal/transport"
-	"github.com/v8950/url-shortener/internal/transport/handlers"
-	"github.com/v8950/url-shortener/internal/worker"
+	"github.com/Xindorgi/MnTP_Kursach/internal/domain"
+	"github.com/Xindorgi/MnTP_Kursach/internal/repository/postgres"
+	"github.com/Xindorgi/MnTP_Kursach/internal/repository/redis"
+	"github.com/Xindorgi/MnTP_Kursach/internal/service"
+	"github.com/Xindorgi/MnTP_Kursach/internal/transport"
+	"github.com/Xindorgi/MnTP_Kursach/internal/transport/handlers"
+	"github.com/Xindorgi/MnTP_Kursach/internal/worker"
 )
 
 type testAppOptions struct {
@@ -236,3 +236,4 @@ func TestDashboardPage(t *testing.T) {
 	assert.Contains(t, body, "async function loadAnalytics()")
 	assert.NotContains(t, body, `dispatchEvent(new Event('submit'))`)
 }
+

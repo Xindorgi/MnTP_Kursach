@@ -6,15 +6,15 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/v8950/url-shortener/internal/config"
-	"github.com/v8950/url-shortener/internal/migrator"
-	"github.com/v8950/url-shortener/internal/repository"
-	"github.com/v8950/url-shortener/internal/repository/postgres"
-	"github.com/v8950/url-shortener/internal/repository/redis"
-	"github.com/v8950/url-shortener/internal/service"
-	"github.com/v8950/url-shortener/internal/transport"
-	"github.com/v8950/url-shortener/internal/transport/handlers"
-	"github.com/v8950/url-shortener/internal/worker"
+	"github.com/Xindorgi/MnTP_Kursach/internal/config"
+	"github.com/Xindorgi/MnTP_Kursach/internal/migrator"
+	"github.com/Xindorgi/MnTP_Kursach/internal/repository"
+	"github.com/Xindorgi/MnTP_Kursach/internal/repository/postgres"
+	"github.com/Xindorgi/MnTP_Kursach/internal/repository/redis"
+	"github.com/Xindorgi/MnTP_Kursach/internal/service"
+	"github.com/Xindorgi/MnTP_Kursach/internal/transport"
+	"github.com/Xindorgi/MnTP_Kursach/internal/transport/handlers"
+	"github.com/Xindorgi/MnTP_Kursach/internal/worker"
 )
 
 func main() {
@@ -101,3 +101,4 @@ func main() {
 	analyticsWorker.Close()
 	log.Println("Server stopped gracefully")
 }
+

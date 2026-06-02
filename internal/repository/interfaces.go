@@ -3,7 +3,7 @@ package repository
 import (
 	"context"
 
-	"github.com/v8950/url-shortener/internal/domain"
+	"github.com/Xindorgi/MnTP_Kursach/internal/domain"
 )
 
 // URLRepository defines the interface for URL data access.
@@ -41,3 +41,4 @@ type CacheRepository interface {
 	// Delete removes a cached entry.
 	Delete(ctx context.Context, shortCode string) error
 }
+

@@ -8,8 +8,8 @@ import (
 
 	"github.com/oschwald/geoip2-golang"
 
-	"github.com/v8950/url-shortener/internal/domain"
-	"github.com/v8950/url-shortener/internal/repository"
+	"github.com/Xindorgi/MnTP_Kursach/internal/domain"
+	"github.com/Xindorgi/MnTP_Kursach/internal/repository"
 )
 
 const (
@@ -166,3 +166,4 @@ func (w *AnalyticsWorker) Close() {
 		w.geoIP.Close()
 	}
 }
+

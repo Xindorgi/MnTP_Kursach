@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
-	"github.com/v8950/url-shortener/internal/domain"
+	"github.com/Xindorgi/MnTP_Kursach/internal/domain"
 )
 
 // MockURLRepository is a mock implementation of repository.URLRepository.
@@ -306,3 +306,4 @@ func BenchmarkSqidsDecode(b *testing.B) {
 		_ = s.Decode(code)
 	}
 }
+

@@ -50,3 +50,4 @@ func TestFromRequest_FallsBackToRemoteAddrWhenFiberIPMissing(t *testing.T) {
 	assert.Equal(t, fiber.StatusOK, resp.StatusCode)
 	assert.NotEmpty(t, got)
 }
+

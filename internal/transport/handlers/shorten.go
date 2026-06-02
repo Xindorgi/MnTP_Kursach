@@ -6,7 +6,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 
-	"github.com/v8950/url-shortener/internal/service"
+	"github.com/Xindorgi/MnTP_Kursach/internal/service"
 )
 
 // ShortenHandler handles POST /api/v1/shorten requests.
@@ -76,3 +76,4 @@ func (h *ShortenHandler) Handle(c *fiber.Ctx) error {
 		ManagementToken: created.ManagementToken,
 	})
 }
+

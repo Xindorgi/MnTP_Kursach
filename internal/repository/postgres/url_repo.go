@@ -8,7 +8,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/v8950/url-shortener/internal/domain"
+	"github.com/Xindorgi/MnTP_Kursach/internal/domain"
 )
 
 // URLRepository implements repository.URLRepository using PostgreSQL.
@@ -168,3 +168,4 @@ func (r *InMemoryURLRepository) FindByManagementToken(ctx context.Context, token
 	}
 	return nil, fmt.Errorf("URL not found")
 }
+

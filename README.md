@@ -138,7 +138,7 @@
 
 ```bash
 # 1. Клонировать репозиторий
-git clone https://github.com/v8950/url-shortener.git
+git clone https://github.com/Xindorgi/MnTP_Kursach.git
 cd url-shortener
 
 # 2. Скачать GeoIP базу (опционально, для гео-аналитики)

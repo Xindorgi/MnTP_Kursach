@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/v8950/url-shortener/internal/domain"
+	"github.com/Xindorgi/MnTP_Kursach/internal/domain"
 )
 
 // publicCountryCases uses well-known public IPs. ISO codes depend on the installed GeoLite2 build;
@@ -62,3 +62,4 @@ func TestNewAnalyticsWorker_MissingDatabaseStillCreatesWorker(t *testing.T) {
 	require.NotNil(t, w)
 	assert.Nil(t, w.geoIP)
 }
+

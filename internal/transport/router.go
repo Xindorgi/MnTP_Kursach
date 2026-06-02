@@ -5,8 +5,8 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 
-	"github.com/v8950/url-shortener/internal/transport/handlers"
-	"github.com/v8950/url-shortener/internal/transport/middleware"
+	"github.com/Xindorgi/MnTP_Kursach/internal/transport/handlers"
+	"github.com/Xindorgi/MnTP_Kursach/internal/transport/middleware"
 )
 
 func productionFiberConfig() fiber.Config {
@@ -83,3 +83,4 @@ func SetupRoutesForTest(
 	mountRoutes(app, shortenHandler, redirectHandler, analyticsHandler, dashboardHandler, indexHandler)
 	return app
 }
+
