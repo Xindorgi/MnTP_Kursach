@@ -43,6 +43,7 @@ linters:
     - varnamelen
     - wrapcheck
     - wsl
+    - wsl_v5
   settings:
     gocyclo:
       min-complexity: 15
