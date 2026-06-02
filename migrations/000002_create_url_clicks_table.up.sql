@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS url_clicks (
     ip_address  VARCHAR(45),
     user_agent  TEXT,
     referer     TEXT,
-    country     VARCHAR(2),
+    country     VARCHAR(16),
     city        VARCHAR(100),
     clicked_at  TIMESTAMPTZ     NOT NULL DEFAULT NOW()
 );

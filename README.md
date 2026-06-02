@@ -145,12 +145,16 @@ cd url-shortener
 #    Зарегистрироваться на https://www.maxmind.com/ и скачать
 #    GeoLite2-City.mmdb в директорию ./geoip/
 
-# 3. Запустить
+# 3. Запустить (PostgreSQL применит SQL-миграции автоматически при первом запуске)
 docker compose up -d
 
 # 4. Проверить
 curl http://localhost:8080/dashboard
 ```
+
+> **Важно:** миграции из `migrations/*.up.sql` выполняются только при **первом** создании тома PostgreSQL.
+> Если база уже существовала без таблиц, либо примените миграции вручную (см. раздел «Миграции»), либо пересоздайте том:
+> `docker compose down -v && docker compose up -d`
 
 ### Локальный запуск (без Docker)
 
@@ -161,6 +165,7 @@ curl http://localhost:8080/dashboard
 createdb urlshortener
 psql -d urlshortener -f migrations/000001_create_urls_table.up.sql
 psql -d urlshortener -f migrations/000002_create_url_clicks_table.up.sql
+psql -d urlshortener -f migrations/000003_expand_country_column.up.sql
 
 # 2. Скопировать и настроить .env
 cp .env.example .env
@@ -206,14 +211,44 @@ go run ./cmd/server
 
 ## Миграции
 
+Файлы в `migrations/`:
+
+| Файл | Назначение |
+|------|------------|
+| `000001_create_urls_table.up.sql` | Таблица `urls` |
+| `000002_create_url_clicks_table.up.sql` | Таблица `url_clicks` |
+| `000003_expand_country_column.up.sql` | Расширение `country` до `VARCHAR(16)` (значение `LOCAL`) |
+
+### Docker Compose
+
+При **первом** `docker compose up` PostgreSQL автоматически выполняет все `*.up.sql`, смонтированные в `/docker-entrypoint-initdb.d/`.
+
+Проверить, что таблицы созданы:
+
+```bash
+docker exec url-shortener-db psql -U urlshortener -d urlshortener -c "\dt"
+```
+
+Если том уже существовал до добавления init-скриптов, примените миграции вручную:
+
+```bash
+docker exec -i url-shortener-db psql -U urlshortener -d urlshortener < migrations/000001_create_urls_table.up.sql
+docker exec -i url-shortener-db psql -U urlshortener -d urlshortener < migrations/000002_create_url_clicks_table.up.sql
+docker exec -i url-shortener-db psql -U urlshortener -d urlshortener < migrations/000003_expand_country_column.up.sql
+```
+
+### Локально (без Docker)
+
 ```bash
 # Применить миграции
 psql -d urlshortener -f migrations/000001_create_urls_table.up.sql
 psql -d urlshortener -f migrations/000002_create_url_clicks_table.up.sql
+psql -d urlshortener -f migrations/000003_expand_country_column.up.sql
 
 # Откатить миграции
-psql -d urlshortener -f migrations/000001_create_urls_table.down.sql
+psql -d urlshortener -f migrations/000003_expand_country_column.down.sql
 psql -d urlshortener -f migrations/000002_create_url_clicks_table.down.sql
+psql -d urlshortener -f migrations/000001_create_urls_table.down.sql
 ```
 
 ## Структура проекта

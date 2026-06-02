@@ -11,6 +11,10 @@ services:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      # Runs *.sql from this folder only on first volume init (empty database).
+      - ./migrations/000001_create_urls_table.up.sql:/docker-entrypoint-initdb.d/01_create_urls.sql:ro
+      - ./migrations/000002_create_url_clicks_table.up.sql:/docker-entrypoint-initdb.d/02_create_url_clicks.sql:ro
+      - ./migrations/000003_expand_country_column.up.sql:/docker-entrypoint-initdb.d/03_expand_country.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-urlshortener}"]
       interval: 5s
