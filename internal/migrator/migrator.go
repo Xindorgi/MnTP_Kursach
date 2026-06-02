@@ -128,4 +128,3 @@ func applyMigration(ctx context.Context, pool *pgxpool.Pool, filename, sql strin
 
 	return tx.Commit(ctx)
 }
-

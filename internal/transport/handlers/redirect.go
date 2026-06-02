@@ -45,4 +45,3 @@ func (h *RedirectHandler) Handle(c *fiber.Ctx) error {
 	// Redirect with 301 Moved Permanently
 	return c.Redirect(url.LongURL, fiber.StatusMovedPermanently)
 }
-

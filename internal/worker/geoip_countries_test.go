@@ -62,4 +62,3 @@ func TestNewAnalyticsWorker_MissingDatabaseStillCreatesWorker(t *testing.T) {
 	require.NotNil(t, w)
 	assert.Nil(t, w.geoIP)
 }
-

@@ -236,4 +236,3 @@ func TestDashboardPage(t *testing.T) {
 	assert.Contains(t, body, "async function loadAnalytics()")
 	assert.NotContains(t, body, `dispatchEvent(new Event('submit'))`)
 }
-

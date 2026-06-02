@@ -46,4 +46,3 @@ func countryClicks(stats *domain.ClickStats, country string) int64 {
 	}
 	return 0
 }
-

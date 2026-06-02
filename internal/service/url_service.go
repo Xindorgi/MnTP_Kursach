@@ -163,4 +163,3 @@ func (s *URLService) GetAnalytics(ctx context.Context, shortCode, token string) 
 func (s *URLService) GetURLByShortCode(ctx context.Context, shortCode string) (*domain.URL, error) {
 	return s.urlRepo.FindByShortCode(ctx, shortCode)
 }
-

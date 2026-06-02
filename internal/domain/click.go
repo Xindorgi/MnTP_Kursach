@@ -38,4 +38,3 @@ type ReferrerCount struct {
 	Referrer string `json:"referrer"`
 	Count    int64  `json:"count"`
 }
-

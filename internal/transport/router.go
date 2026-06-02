@@ -83,4 +83,3 @@ func SetupRoutesForTest(
 	mountRoutes(app, shortenHandler, redirectHandler, analyticsHandler, dashboardHandler, indexHandler)
 	return app
 }
-

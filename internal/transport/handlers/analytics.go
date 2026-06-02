@@ -42,4 +42,3 @@ func (h *AnalyticsHandler) Handle(c *fiber.Ctx) error {
 
 	return c.JSON(stats)
 }
-

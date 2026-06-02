@@ -41,4 +41,3 @@ func Recovery() fiber.Handler {
 		return c.Next()
 	}
 }
-

@@ -203,4 +203,3 @@ func (r *InMemoryClickRepository) GetStats(ctx context.Context, urlID int64) (*d
 
 	return stats, nil
 }
-

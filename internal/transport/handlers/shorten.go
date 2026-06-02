@@ -76,4 +76,3 @@ func (h *ShortenHandler) Handle(c *fiber.Ctx) error {
 		ManagementToken: created.ManagementToken,
 	})
 }
-

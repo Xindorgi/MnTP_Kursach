@@ -41,4 +41,3 @@ type CacheRepository interface {
 	// Delete removes a cached entry.
 	Delete(ctx context.Context, shortCode string) error
 }
-

@@ -306,4 +306,3 @@ func BenchmarkSqidsDecode(b *testing.B) {
 		_ = s.Decode(code)
 	}
 }
-

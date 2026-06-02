@@ -101,4 +101,3 @@ func main() {
 	analyticsWorker.Close()
 	log.Println("Server stopped gracefully")
 }
-

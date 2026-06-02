@@ -168,4 +168,3 @@ func (r *InMemoryURLRepository) FindByManagementToken(ctx context.Context, token
 	}
 	return nil, fmt.Errorf("URL not found")
 }
-

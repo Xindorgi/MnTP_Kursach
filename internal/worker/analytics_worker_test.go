@@ -65,4 +65,3 @@ func TestEnrichWithGeoIP_EmptyIPMarkedLocal(t *testing.T) {
 
 	assert.Equal(t, CountryLocal, event.Country)
 }
-

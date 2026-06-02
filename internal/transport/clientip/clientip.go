@@ -22,4 +22,3 @@ func FromRequest(c *fiber.Ctx) string {
 	}
 	return host
 }
-

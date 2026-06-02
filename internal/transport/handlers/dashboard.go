@@ -30,4 +30,3 @@ func (h *DashboardHandler) Handle(c *fiber.Ctx) error {
 	c.Set("Content-Type", "text/html; charset=utf-8")
 	return h.tmpl.ExecuteTemplate(c, "dashboard.html", nil)
 }
-

@@ -166,4 +166,3 @@ func (w *AnalyticsWorker) Close() {
 		w.geoIP.Close()
 	}
 }
-
