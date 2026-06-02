@@ -1,82 +1,68 @@
-linters-settings:
-  gocyclo:
-    min-complexity: 15
-  misspell:
-    locale: US
-  revive:
-    rules:
-      - name: exported
-        severity: warning
-      - name: blank-imports
-      - name: context-as-argument
-      - name: context-keys-type
-      - name: dot-imports
-      - name: error-return
-      - name: error-strings
-      - name: error-naming
-      - name: if-return
-      - name: increment-decrement
-      - name: var-naming
-      - name: var-declaration
-      - name: package-comments
-      - name: range
-      - name: receiver-naming
-      - name: time-naming
-      - name: unexported-return
-      - name: indent-error-flow
-      - name: errorf
-      - name: empty-block
-      - name: superfluous-else
-      - name: unused-parameter
-      - name: unreachable-code
-      - name: redefines-builtin-id
-  gosec:
-    excludes:
-      - G107  # Allow potential HTTP request injection (false positives for URL shortening)
-  staticcheck:
-    checks:
-      - "all"
-      - "-ST1000" # Allow missing package comments in test files
+version: "2"
 
 linters:
-  enable:
+  default: all
+  disable:
+    - contextcheck
+    - cyclop
+    - depguard
+    - dupl
+    - err113
     - errcheck
-    - gosimple
-    - govet
-    - ineffassign
-    - staticcheck
-    - unused
+    - exhaustruct
+    - forbidigo
+    - funlen
+    - funcorder
+    - gochecknoglobals
+    - gochecknoinits
+    - gocognit
+    - goconst
+    - gocritic
+    - godot
+    - godox
+    - gomoddirectives
+    - gomodguard
+    - gosec
+    - ireturn
+    - lll
+    - mnd
+    - nestif
+    - nilnil
+    - nlreturn
+    - noctx
+    - noinlineerr
+    - nolintlint
+    - nosprintfhostport
+    - paralleltest
+    - perfsprint
+    - predeclared
     - revive
+    - tagalign
+    - tagliatelle
+    - testpackage
+    - varnamelen
+    - wrapcheck
+    - wsl
+  settings:
+    gocyclo:
+      min-complexity: 15
+    misspell:
+      locale: US
+    staticcheck:
+      checks:
+        - all
+        - "-ST1000"
+        - "-SA9003"
+
+  exclusions:
+    paths:
+      - ".*_test\\.go$"
+      - "third_party/"
+
+formatters:
+  enable:
     - gofmt
     - goimports
-    - gocyclo
-    - misspell
-    - prealloc
-    - unconvert
-    - whitespace
-    - gosec
-    - nilerr
-    - errorlint
-    - durationcheck
-    - noctx
-    - usestdlibvars
 
 run:
   timeout: 5m
-  tests: true
-
-issues:
-  exclude-rules:
-    - path: _test\.go
-      linters:
-        - gocyclo
-        - errcheck
-        - gosec
-        - noctx
-        - durationcheck
-  max-issues-per-linter: 0
-  max-same-issues: 0
-
-output:
-  formats:
-    - format: colored-line-number

@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+  security-events: write
+
 env:
   GO_VERSION: "1.26"
 
@@ -36,9 +40,9 @@ jobs:
         run: go mod download
 
       - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v7
         with:
-          version: latest
+          version: v2.12.2
           args: --timeout=5m --verbose
 
       - name: Run gosec security scanner
@@ -47,8 +51,8 @@ jobs:
           args: -no-fail -fmt sarif -out gosec-results.sarif ./...
 
       - name: Upload gosec results to GitHub Security
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
+        if: success() && hashFiles('gosec-results.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: gosec-results.sarif
 

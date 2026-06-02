@@ -9,9 +9,9 @@ import (
 
 // Config holds all configuration for the application.
 type Config struct {
-	AppPort  int
-	AppEnv   string
-	BaseURL  string
+	AppPort int
+	AppEnv  string
+	BaseURL string
 
 	PostgresHost     string
 	PostgresPort     int
@@ -55,9 +55,9 @@ func (c *Config) RedisAddr() string {
 // Load reads configuration from environment variables with defaults.
 func Load() *Config {
 	return &Config{
-		AppPort:  getEnvInt("APP_PORT", 8080),
-		AppEnv:   getEnv("APP_ENV", "development"),
-		BaseURL:  getEnv("BASE_URL", "http://localhost:8080"),
+		AppPort: getEnvInt("APP_PORT", 8080),
+		AppEnv:  getEnv("APP_ENV", "development"),
+		BaseURL: getEnv("BASE_URL", "http://localhost:8080"),
 
 		PostgresHost:     getEnv("POSTGRES_HOST", "localhost"),
 		PostgresPort:     getEnvInt("POSTGRES_PORT", 5432),
