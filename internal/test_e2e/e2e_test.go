@@ -25,9 +25,24 @@ import (
 	"github.com/v8950/url-shortener/internal/worker"
 )
 
+type testAppOptions struct {
+	geoIPDBPath string
+}
+
+func withGeoIPDatabase(path string) func(*testAppOptions) {
+	return func(o *testAppOptions) {
+		o.geoIPDBPath = path
+	}
+}
+
 // setupTestApp creates a fully wired Fiber app with in-memory repositories for testing.
-func setupTestApp(t *testing.T) (*fiber.App, context.CancelFunc) {
+func setupTestApp(t *testing.T, opts ...func(*testAppOptions)) (*fiber.App, context.CancelFunc) {
 	t.Helper()
+
+	cfg := &testAppOptions{}
+	for _, opt := range opts {
+		opt(cfg)
+	}
 
 	// Initialize in-memory repositories (no Docker needed)
 	urlRepo := postgres.NewInMemoryURLRepository()
@@ -35,7 +50,7 @@ func setupTestApp(t *testing.T) (*fiber.App, context.CancelFunc) {
 	cacheRepo := redis.NewInMemoryCacheRepository()
 
 	// Initialize analytics worker with in-memory click repo
-	analyticsWorker, err := worker.NewAnalyticsWorker(clickRepo, "")
+	analyticsWorker, err := worker.NewAnalyticsWorker(clickRepo, cfg.geoIPDBPath)
 	require.NoError(t, err)
 
 	// Start the analytics worker in background
@@ -53,8 +68,8 @@ func setupTestApp(t *testing.T) (*fiber.App, context.CancelFunc) {
 	dashboardHandler := handlers.NewDashboardHandler()
 	indexHandler := handlers.NewIndexHandler()
 
-	// Setup Fiber app
-	app := transport.SetupRoutes(shortenHandler, redirectHandler, analyticsHandler, dashboardHandler, indexHandler)
+	// Setup Fiber app (test config trusts X-Forwarded-For for GeoIP e2e)
+	app := transport.SetupRoutesForTest(shortenHandler, redirectHandler, analyticsHandler, dashboardHandler, indexHandler)
 
 	return app, cancel
 }

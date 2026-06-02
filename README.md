@@ -196,8 +196,10 @@ go run ./cmd/server
 |---------|----------|
 | `make build` | Сборка бинарника |
 | `make test` | Запуск всех тестов (unit + e2e) |
-| `make test-unit` | Unit-тесты сервисного слоя |
+| `make test-unit` | Unit-тесты (service, worker, transport, repository) |
 | `make test-e2e` | E2E-тесты |
+| `make test-geoip` | Тесты GeoIP по странам (нужен `geoip/GeoLite2-City.mmdb`) |
+| `make test-cover` | Отчёт о покрытии по тестируемым пакетам |
 | `make bench` | Бенчмарки |
 | `make lint` | Линтинг (golangci-lint) |
 | `make sec` | Сканирование безопасности (gosec) |
@@ -281,20 +283,41 @@ psql -d urlshortener -f migrations/000001_create_urls_table.down.sql
 
 ## Тестирование
 
-Проект покрыт unit-тестами (слой service) и e2e-тестами (полный HTTP-цикл).
+| Пакет | Что проверяется |
+|-------|-----------------|
+| `internal/service` | Создание ссылки, кэш, resolve, ошибки БД |
+| `internal/worker` | Приватные IP → `LOCAL`, GeoIP по публичным IP (US, DE, GB, JP, FR) |
+| `internal/transport/clientip` | `X-Forwarded-For` и fallback на `RemoteAddr` |
+| `internal/repository/postgres` | Агрегация кликов по странам (in-memory) |
+| `internal/test_e2e` | HTTP: shorten → redirect → analytics; GeoIP end-to-end |
+
+Тесты GeoIP (`TestEnrichWithGeoIP_PublicCountries`, `TestE2E_GeoIPCountries`) **пропускаются**, если нет файла `geoip/GeoLite2-City.mmdb` (см. [geoip/README.md](geoip/README.md)). В CI они тоже skip — для локальной проверки стран скачайте базу MaxMind.
 
 ```bash
-# Все тесты
+# Все тесты (GeoIP-тесты skip без .mmdb)
 make test
 
-# Только unit
+# Unit по слоям
 make test-unit
 
-# Только e2e
+# E2E (полный HTTP-цикл)
 make test-e2e
+
+# Только GeoIP (США, Германия, UK, Япония, Франция + LOCAL)
+make test-geoip
+
+# Покрытие
+make test-cover
 
 # Бенчмарки
 make bench
+```
+
+Симуляция клика из другой страны вручную (как в production за reverse proxy):
+
+```bash
+curl -L -H "X-Forwarded-For: 8.8.8.8" "http://localhost:8080/YOUR_CODE"
+curl -L -H "X-Forwarded-For: 178.63.41.15" "http://localhost:8080/YOUR_CODE"   # DE
 ```
 
 ## Безопасность

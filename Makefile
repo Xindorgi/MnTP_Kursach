@@ -1,4 +1,4 @@
-.PHONY: all build test test-e2e bench lint sec vulncheck clean
+.PHONY: all build test test-unit test-e2e test-geoip test-cover bench lint sec vulncheck clean
 
 # Build the binary
 build:
@@ -8,13 +8,22 @@ build:
 test:
 	go test -count=1 -timeout=60s ./...
 
-# Run unit tests only
+# Run unit tests only (service + worker + transport + repository)
 test-unit:
-	go test -count=1 -timeout=30s ./internal/service/...
+	go test -count=1 -timeout=30s ./internal/service/... ./internal/worker/... ./internal/transport/... ./internal/repository/...
 
 # Run e2e tests only
 test-e2e:
 	go test -count=1 -timeout=30s -v ./internal/test_e2e/...
+
+# GeoIP tests (skip automatically if geoip/GeoLite2-City.mmdb is missing)
+test-geoip:
+	go test -count=1 -timeout=30s -v ./internal/worker/... -run 'GeoIP|PublicCountries'
+	go test -count=1 -timeout=30s -v ./internal/test_e2e/... -run GeoIP
+
+# Coverage report for tested packages
+test-cover:
+	go test -count=1 -cover ./internal/service/... ./internal/worker/... ./internal/transport/... ./internal/repository/... ./internal/test_e2e/...
 
 # Run benchmarks
 bench:

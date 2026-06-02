@@ -9,15 +9,8 @@ import (
 	"github.com/v8950/url-shortener/internal/transport/middleware"
 )
 
-// SetupRoutes configures all application routes and returns the Fiber app.
-func SetupRoutes(
-	shortenHandler *handlers.ShortenHandler,
-	redirectHandler *handlers.RedirectHandler,
-	analyticsHandler *handlers.AnalyticsHandler,
-	dashboardHandler *handlers.DashboardHandler,
-	indexHandler *handlers.IndexHandler,
-) *fiber.App {
-	app := fiber.New(fiber.Config{
+func productionFiberConfig() fiber.Config {
+	return fiber.Config{
 		AppName: "URL Shortener",
 		// Trust X-Forwarded-For from Docker bridge / reverse proxies so GeoIP sees the real client IP.
 		ProxyHeader:             fiber.HeaderXForwardedFor,
@@ -29,9 +22,24 @@ func SetupRoutes(
 			"192.168.0.0/16",
 			"::1/128",
 		},
-	})
+	}
+}
 
-	// Global middlewares
+func testFiberConfig() fiber.Config {
+	cfg := productionFiberConfig()
+	// httptest has no trusted reverse proxy; accept X-Forwarded-For as-is.
+	cfg.EnableTrustedProxyCheck = false
+	return cfg
+}
+
+func mountRoutes(
+	app *fiber.App,
+	shortenHandler *handlers.ShortenHandler,
+	redirectHandler *handlers.RedirectHandler,
+	analyticsHandler *handlers.AnalyticsHandler,
+	dashboardHandler *handlers.DashboardHandler,
+	indexHandler *handlers.IndexHandler,
+) {
 	app.Use(middleware.Logger())
 	app.Use(recover.New())
 	app.Use(cors.New(cors.Config{
@@ -40,19 +48,38 @@ func SetupRoutes(
 		AllowHeaders: "Content-Type, Authorization",
 	}))
 
-	// Main landing page (must be before /:code to not be caught by redirect)
 	app.Get("/", indexHandler.Handle)
-
-	// Dashboard route (must be before /:code to not be caught by redirect)
 	app.Get("/dashboard", dashboardHandler.Handle)
 
-	// API v1 routes
 	v1 := app.Group("/api/v1")
 	v1.Post("/shorten", shortenHandler.Handle)
 	v1.Get("/analytics/:code", analyticsHandler.Handle)
 
-	// Redirect route (must be last to not conflict with API routes)
 	app.Get("/:code", redirectHandler.Handle)
+}
 
+// SetupRoutes configures all application routes and returns the Fiber app.
+func SetupRoutes(
+	shortenHandler *handlers.ShortenHandler,
+	redirectHandler *handlers.RedirectHandler,
+	analyticsHandler *handlers.AnalyticsHandler,
+	dashboardHandler *handlers.DashboardHandler,
+	indexHandler *handlers.IndexHandler,
+) *fiber.App {
+	app := fiber.New(productionFiberConfig())
+	mountRoutes(app, shortenHandler, redirectHandler, analyticsHandler, dashboardHandler, indexHandler)
+	return app
+}
+
+// SetupRoutesForTest is like SetupRoutes but trusts X-Forwarded-For in httptest (no reverse proxy).
+func SetupRoutesForTest(
+	shortenHandler *handlers.ShortenHandler,
+	redirectHandler *handlers.RedirectHandler,
+	analyticsHandler *handlers.AnalyticsHandler,
+	dashboardHandler *handlers.DashboardHandler,
+	indexHandler *handlers.IndexHandler,
+) *fiber.App {
+	app := fiber.New(testFiberConfig())
+	mountRoutes(app, shortenHandler, redirectHandler, analyticsHandler, dashboardHandler, indexHandler)
 	return app
 }
