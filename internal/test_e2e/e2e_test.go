@@ -217,6 +217,87 @@ func TestE2EShortenAndRedirect(t *testing.T) {
 	})
 }
 
+// TestE2EReferrerTracking tests that different referrer types are correctly aggregated in analytics.
+func TestE2EReferrerTracking(t *testing.T) {
+	app, cancel := setupTestApp(t)
+	defer cancel()
+
+	// Step 1: Create a short URL
+	longURL := "https://example.com/referrer-test"
+	reqBody := `{"url":"` + longURL + `"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/shorten", strings.NewReader(reqBody))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req, 5000)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusCreated, resp.StatusCode)
+
+	var createResp struct {
+		ShortCode       string `json:"short_code"`
+		ManagementToken string `json:"management_token"`
+	}
+	err = json.NewDecoder(resp.Body).Decode(&createResp)
+	require.NoError(t, err)
+	resp.Body.Close()
+	require.NotEmpty(t, createResp.ShortCode)
+	require.NotEmpty(t, createResp.ManagementToken)
+
+	// Step 2: Perform redirects with different referrer types.
+	// Note: httptest + Fiber may not preserve Referer header exactly as set,
+	// so we verify the general behaviour rather than exact referrer strings.
+	type click struct {
+		referer   string
+		userAgent string
+	}
+	clicks := []click{
+		{referer: "https://twitter.com/someuser", userAgent: "test-agent/1.0"}, // Social media
+		{referer: "https://example.com/page", userAgent: "test-agent/2.0"},     // External site
+		{referer: "", userAgent: "test-agent/3.0"},                             // Direct (empty → "Direct")
+	}
+
+	for i, c := range clicks {
+		path := "/" + createResp.ShortCode
+		req := httptest.NewRequest(http.MethodGet, path, nil)
+		req.Header.Set("User-Agent", c.userAgent)
+		if c.referer != "" {
+			req.Header.Set("Referer", c.referer)
+		}
+		t.Logf("Sending click %d: referer=%q", i, c.referer)
+
+		resp, err = app.Test(req, 5000)
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusMovedPermanently, resp.StatusCode)
+		assert.Equal(t, longURL, resp.Header.Get("Location"))
+		resp.Body.Close()
+	}
+
+	// Step 3: Wait for analytics worker and verify referrer aggregation
+	stats := waitForAnalytics(t, app, createResp.ShortCode, createResp.ManagementToken, int64(len(clicks)))
+
+	require.NotNil(t, stats)
+	assert.Equal(t, int64(len(clicks)), stats.TotalClicks, "Should have all 3 clicks recorded")
+
+	// Log all referrers for debugging
+	for _, r := range stats.TopReferrers {
+		t.Logf("Referrer group: %q -> %d clicks", r.Referrer, r.Count)
+	}
+
+	// Build a map for easier assertion
+	referrerMap := make(map[string]int64)
+	for _, r := range stats.TopReferrers {
+		referrerMap[r.Referrer] = r.Count
+	}
+
+	// Verify that we have the expected number of unique referrer groups
+	// (3 clicks: 2 with external referrers + 1 Direct)
+	assert.Equal(t, 3, len(stats.TopReferrers), "Should have 3 unique referrer groups")
+
+	// Verify Direct is present (empty referer → "Direct")
+	assert.Equal(t, int64(1), referrerMap["Direct"], "Direct (empty referer) should have 1 click")
+
+	t.Logf("Referrer tracking verified: total_clicks=%d, referrers=%v", stats.TotalClicks, referrerMap)
+}
+
 // TestDashboardPage verifies the dashboard HTML is served and includes the fixed loader.
 func TestDashboardPage(t *testing.T) {
 	app, cancel := setupTestApp(t)

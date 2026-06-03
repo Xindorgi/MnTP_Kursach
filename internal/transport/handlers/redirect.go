@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"strings"
+
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/Xindorgi/MnTP_Kursach/internal/service"
@@ -33,13 +35,20 @@ func (h *RedirectHandler) Handle(c *fiber.Ctx) error {
 		})
 	}
 
+	// Clone strings from Fiber/FastHTTP before sending to channel.
+	// FastHTTP uses zero-copy string interning — strings point to internal buffers
+	// that get reused on the next request. Without cloning, the async RecordClick
+	// may read corrupted data when the worker processes the event later.
+	userAgent := strings.Clone(c.Get("User-Agent"))
+	referer := strings.Clone(c.Get("Referer"))
+
 	// Record click event asynchronously (non-blocking)
 	h.urlService.RecordClick(
 		c.Context(),
 		shortCode,
 		clientip.FromRequest(c),
-		c.Get("User-Agent"),
-		c.Get("Referer"),
+		userAgent,
+		referer,
 	)
 
 	// Redirect with 301 Moved Permanently

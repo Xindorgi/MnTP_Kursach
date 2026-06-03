@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/Xindorgi/MnTP_Kursach/internal/domain"
@@ -122,7 +123,7 @@ func (r *InMemoryURLRepository) Insert(ctx context.Context, longURL string) (*do
 	url := &domain.URL{
 		ID:              r.nextID,
 		LongURL:         longURL,
-		ManagementToken: fmt.Sprintf("token-%d", r.nextID),
+		ManagementToken: uuid.New().String(),
 		CreatedAt:       time.Now(),
 		UpdatedAt:       time.Now(),
 	}
