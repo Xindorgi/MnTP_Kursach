@@ -33,3 +33,16 @@ geoip/*.mmdb
 /tmp/
 /dist/docs/*.md  
 !docs/API.md  
+
+#Docs files
+docs\analitics.md
+docs\architecture.md
+docs\conclusion.md
+docs\deployment.md
+docs\introduction.md
+docs\part_testing.md
+docs\project.md
+docs\README.md
+docs\realization.md
+docs\references.md
+docs\tech.md
