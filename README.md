@@ -1,6 +1,12 @@
-# URL Shortener
-
+# URL Shortener 
 Высокопроизводительный сервис сокращения ссылок с аналитикой на Go.
+**Вариант 29.** Сервис сокращения ссылок с аналитикой
+
+Аналог bit.ly. Go-бэкенд с генерацией коротких кодов,
+редиректами, сбором статистики (переходы, гео, рефереры). Redis для
+кэширования популярных ссылок. Дашборд для владельцев ссылок.
+
+**Технологии:** Go + PostgreSQL + Redis
 
 ## Возможности
 
@@ -146,7 +152,7 @@ cd url-shortener
 #    GeoLite2-City.mmdb в директорию ./geoip/
 
 # 3. Запустить (миграции накатываются автоматически при старте приложения)
-docker compose up -d
+docker compose -p url-shortener up --build -d
 
 # 4. Проверить
 curl http://localhost:8080/dashboard
@@ -253,32 +259,79 @@ psql -d urlshortener -f migrations/000001_create_urls_table.down.sql
 ## Структура проекта
 
 ```
-.
-├── .github/workflows/       # CI/CD (GitHub Actions)
-├── api/                     # OpenAPI спецификация
-├── cmd/server/              # Точка входа
-├── internal/
-│   ├── config/              # Конфигурация
-│   ├── domain/              # Модели данных (URL, ClickEvent, ClickStats)
-│   ├── migrator/            # Автоматические миграции БД при старте
-│   ├── repository/
-│   │   ├── interfaces.go    # Интерфейсы репозиториев
-│   │   ├── postgres/        # Реализация PostgreSQL + in-memory fallback
-│   │   └── redis/           # Реализация Redis + in-memory fallback
-│   ├── service/             # Бизнес-логика
-│   ├── test_e2e/            # E2E-тесты
-│   ├── transport/
-│   │   ├── handlers/        # HTTP-хендлеры
-│   │   │   └── templates/   # HTML-шаблоны
-│   │   ├── middleware/      # Middleware (логирование)
-│   │   └── router.go        # Маршрутизация
-│   └── worker/              # Analytics Worker (GeoIP + batch insert)
-├── migrations/              # SQL-миграции
-├── templates/               # HTML-шаблоны (для Docker)
-├── docker-compose.yml       # Инфраструктура
-├── Dockerfile               # Многостадийная сборка
-├── Makefile                 # Автоматизация
-└── .env.example             # Пример конфигурации
+./
+├── cmd/                                # Точки входа
+│   └── server/
+│       └── main.go                     # Запуск сервера, DI, graceful shutdown
+├── internal/                           # Внутренняя логика приложения
+│   ├── config/
+│   │   └── config.go                   # Загрузка конфигурации из env
+│   ├── domain/                         # Модели данных (сущности)
+│   │   ├── url.go                      # URL-сущность
+│   │   └── click.go                    # ClickEvent, ClickStats, агрегаты
+│   ├── repository/                     # Интерфейсы доступа к данным
+│   │   ├── interfaces.go               # URLRepository, ClickRepository, CacheRepository
+│   │   ├── postgres/                   # Реализации на PostgreSQL + in-memory
+│   │   │   ├── url_repo.go             # URLRepository (pgx + in-memory)
+│   │   │   ├── click_repo.go           # ClickRepository (pgx.Batch)
+│   │   │   ├── click_repo_memory_test.go
+│   │   │   └── url_repo.go
+│   │   └── redis/                      # Реализация кэша на Redis + in-memory
+│   │       └── cache_repo.go           # CacheRepository (Redis + map fallback)
+│   ├── service/
+│   │   ├── url_service.go              # Бизнес-логика: создание, редирект, аналитика
+│   │   └── url_service_test.go         # Модульные тесты сервиса
+│   ├── transport/                      # HTTP-слой (Fiber v2)
+│   │   ├── router.go                   # Настройка маршрутов и middleware
+│   │   ├── clientip/                   # Утилита извлечения IP клиента
+│   │   │   ├── clientip.go
+│   │   │   └── clientip_test.go
+│   │   ├── handlers/                   # HTTP-хендлеры
+│   │   │   ├── shorten.go              # POST /api/v1/shorten
+│   │   │   ├── redirect.go             # GET /:code
+│   │   │   ├── analytics.go            # GET /api/v1/analytics/:code
+│   │   │   ├── dashboard.go            # GET /dashboard
+│   │   │   ├── index.go                # GET /
+│   │   │   └── templates/              # HTML-шаблоны (embedded)
+│   │   │       ├── dashboard.html
+│   │   │       └── index.html
+│   │   └── middleware/
+│   │       └── middleware.go           # Логирование запросов
+│   ├── worker/                         # Фоновые обработчики
+│   │   ├── analytics_worker.go         # Батчевая запись кликов + GeoIP
+│   │   ├── analytics_worker_test.go
+│   │   ├── geoip_countries_test.go
+│   │   └── geoip_testhelper_test.go
+│   ├── migrator/
+│   │   └── migrator.go                 # Запуск SQL-миграций
+│   └── test_e2e/                       # Интеграционные/E2E-тесты
+│       ├── e2e_test.go                 # Основной E2E-тест
+│       └── geoip_e2e_test.go           # E2E-тест GeoIP
+├── migrations/                         # SQL-миграции
+│   ├── 000001_create_urls_table.up.sql
+│   ├── 000001_create_urls_table.down.sql
+│   ├── 000002_create_url_clicks_table.up.sql
+│   ├── 000002_create_url_clicks_table.down.sql
+│   ├── 000003_expand_country_column.up.sql
+│   └── 000003_expand_country_column.down.sql
+├── geoip/                              # GeoLite2 база (скачивается отдельно)
+│   └── README.md
+├── api/
+│   └── openapi.yaml                    # OpenAPI-спецификация
+├── templates/                          # Дубликаты шаблонов (для тестов)
+│   └── dashboard.html
+├── plans/                              # Документация планирования
+│   └── architecture-plan.md
+├── docs/                               # Техническая документация
+│   └── API.md
+├── .env.example                        # Пример переменных окружения
+├── .golangci.yml                       # Конфигурация линтера
+├── docker-compose.yml                  # Docker Compose (PostgreSQL + Redis + app)
+├── Dockerfile                          # Многостадийная сборка
+├── go.mod / go.sum                     # Модульные зависимости
+├── Makefile                            # Автоматизация сборки и тестов
+└── README.md
+
 ```
 
 ## Тестирование
