@@ -31,4 +31,5 @@ geoip/*.mmdb
 
 # Build output
 /tmp/
-/dist/
+/dist/docs/*.md  
+!docs/API.md  
