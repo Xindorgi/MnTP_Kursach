@@ -148,7 +148,7 @@ CREATE TABLE schema_migrations (
 
 ```mermaid
 sequenceDiagram
-    participant Client
+    actor Client as Пользователь
     participant Fiber as Fiber Handler
     participant Service as URL Service
     participant Cache as Redis Cache
@@ -171,7 +171,7 @@ sequenceDiagram
 
 ```mermaid
 sequenceDiagram
-    participant Client
+    actor Client as Пользователь
     participant Fiber as Fiber Handler
     participant Service as URL Service
     participant Cache as Redis Cache
@@ -213,7 +213,7 @@ sequenceDiagram
 
 ```mermaid
 sequenceDiagram
-    participant Client
+    actor Client as Пользователь
     participant Fiber as Fiber Handler
     participant Service as URL Service
     participant DB as PostgreSQL

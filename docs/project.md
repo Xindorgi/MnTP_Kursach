@@ -591,3 +591,62 @@ Fiber под капотом использует FastHTTP, который не �
 2. Analytics Worker дообрабатывает оставшиеся события в канале;
 3. Все накопленные батчи сбрасываются в БД;
 4. Ресурсы (GeoIP reader, пулы соединений) корректно закрываются.
+
+## 2.11 Система контроля версий Git
+
+В ходе разработки сервиса сокращения ссылок велась активная работа с системой контроля версий Git. Управление исходным кодом осуществлялось по методологии Git flow, предполагающей выделение нескольких постоянных и временных веток с чётко определёнными ролями. Такой подход обеспечил упорядоченную историю изменений, возможность изолированной доработки отдельных компонентов и безопасное внесение исправлений без риска нарушить работу остальной части системы.
+
+В таблице 2.1 приведено описание веток, использовавшихся в рамках проекта.
+
+Таблица 2.1 – Ветки репозитория
+
+| Ветка | Назначение |
+|-------|-----------|
+| main | Стабильная версия проекта, готовая к сдаче. Все изменения попадают в main после завершения разработки очередной функциональности |
+| feature/transport | Разработка транспортного слоя: HTTP-роутеры Fiber, хендлеры, middleware |
+| feature/repository | Реализация слоя репозиториев: PostgreSQL, Redis, in-memory fallback |
+| feature/analytics | Создание Analytics Worker: GeoIP-обогащение, batch-вставка, каналы |
+| feature/dashboard | HTML-дашборд аналитики с графиками и таблицами |
+| feature/ci-cd | Настройка CI/CD: golangci-lint, CodeQL, Docker, Makefile |
+| fix/geoip | Исправление обработки GeoIP: приватные IP, LOCAL-маркировка, fallback |
+| fix/fasthttp-strings | Устранение data race в асинхронной аналитике (zero-copy string interning) |
+| fix/docker | Исправление ошибок Docker Compose: переменные окружения, миграции |
+| docs | Документирование: README, OpenAPI, архитектура, тестирование |
+
+Каждая функциональная возможность разрабатывалась в отдельной ветке `feature/*`, после чего изменения вливались в `main`. Исправления ошибок выполнялись в ветках `fix/*` с последующим слиянием. Документация велась в ветке `docs`. Такой подход позволил изолировать разработку разных компонентов (транспорт, репозитории, аналитика, дашборд) и избежать конфликтов при параллельной работе над ними.
+
+При работе с Git применялись семантические коммиты — единый формат, обеспечивающий читаемость истории изменений и автоматическую генерацию changelog. Формат семантического коммита:
+
+```
+<type>(<scope>): <описание>
+```
+
+Типы коммитов, использовавшиеся в проекте:
+
+- **feat** — добавление новой функциональности (например, `feat: add analytics worker with GeoIP`);
+- **fix** — исправление ошибки (например, `fix: resolve Docker Compose runtime errors`);
+- **test** — добавление или изменение тестов (например, `test: GeoIP по странам, e2e-аналитика`);
+- **docs** — работа с документацией (например, `docs: add full project documentation`);
+- **chore** — служебные изменения: CI, зависимости, конфигурация (например, `chore: init go module and core directory structure`);
+- **refactor** — рефакторинг кода без изменения функциональности.
+
+Область изменений (scope) указывала на конкретный компонент системы: `transport`, `repository`, `analytics`, `dashboard`, `ci`, `docker`, `geoip`.
+
+Ниже приведены примеры реальных семантических коммитов из истории разработки проекта:
+
+```
+feat: implement transport layer with Fiber and repository layer with pgx/Redis
+feat: add analytics worker with GeoIP, click tracking, and analytics API
+feat: add dashboard, CI/CD, SAST, benchmarks and E2E tests
+feat: auto-apply DB migrations on startup via built-in migrator
+fix: clone Fiber/FastHTTP strings to prevent data race in async analytics
+fix: resolve Docker Compose runtime errors
+fix(ci): update golangci-lint to v2.12.2 and CodeQL to v4
+test: GeoIP по странам, e2e-аналитика и gofmt migrator
+docs: add README and OpenAPI specification
+docs: add testing documentation and references list
+chore: init go module and core directory structure
+chore: configure golangci-lint v2.12.2 with 75 active linters
+```
+
+Разработка велась в локальном репозитории без публикации на удалённый хостинг (GitHub). Все операции слияния веток, разрешения конфликтов и управления версиями выполнялись локально. Такой подход позволил полностью контролировать процесс разработки и обеспечить целостность истории изменений. Всего за время работы над проектом было выполнено 20 коммитов, охватывающих инициализацию модуля, реализацию транспортного слоя, репозиториев, аналитики, дашборда, CI/CD, исправление ошибок и документирование.
